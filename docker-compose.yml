@@ -1,0 +1,32 @@
+services:  
+  postgres:  
+    image: postgres:latest 
+    environment:  
+      POSTGRES_USER: admin  # 数据库用户名  
+      # 注意：在生产环境中，密码必须设置为强密码  
+      POSTGRES_PASSWORD: ashing-great  # 必须设置强密码  
+      POSTGRES_DB: multiagent  # 数据库名称  
+    volumes:  
+      - ./postgres-data:/var/lib/postgresql/data  # 宿主机持久化目录  
+    ports:  
+      - "5432:5432"  
+    networks:  
+      - db-network
+
+  pgadmin:  
+    image: dpage/pgadmin4  
+    environment:  
+      PGADMIN_DEFAULT_EMAIL: ashingzhang30@gmail.com  
+      PGADMIN_DEFAULT_PASSWORD: ashing-up  # 与数据库密码区分  
+    ports:  
+      - "5050:80"  # 5050端口映射到容器的80端口  
+    volumes:  
+      - ./pgadmin-data:/var/lib/pgadmin  # 宿主机持久化目录
+    depends_on:  
+      - postgres  
+    networks:  
+      - db-network  
+
+networks:  
+  db-network:  
+    driver: bridge  

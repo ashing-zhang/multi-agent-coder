@@ -2,11 +2,22 @@ import random
 from backend.core.database import SessionLocal, engine
 from backend.models.user import User
 from sqlalchemy.exc import IntegrityError
+from datetime import datetime
 
-# 生成100个用户
-roles = ["user", "admin"]
+# 生成100个用户，补全所有必需字段
 users = [
-    User(username=f"user{i}", password=f"pass{i}", role=random.choice(roles))
+    User(
+        username=f"user{i}",
+        password=f"pass{i}",
+        email=f"user{i}@example.com",
+        full_name=f"User {i}",
+        avatar=None,
+        phone=None,
+        is_active=True,
+        created_at=datetime.now(),
+        updated_at=datetime.now(),
+        last_login=None
+    )
     for i in range(1, 101)
 ]
 
