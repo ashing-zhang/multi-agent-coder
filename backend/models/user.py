@@ -7,7 +7,6 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True, nullable=False)
     password = Column(String, nullable=False)
-    role = Column(String, default="user")
     email = Column(String, unique=True, index=True, nullable=True)
     full_name = Column(String, nullable=True)
     avatar = Column(String, nullable=True)

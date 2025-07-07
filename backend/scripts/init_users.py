@@ -1,6 +1,8 @@
 import random
 from backend.core.database import SessionLocal, engine
 from backend.models.user import User
+from backend.models.requirement import Requirement
+from backend.models.generated_code import GeneratedCode
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
 
