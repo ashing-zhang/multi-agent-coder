@@ -2,14 +2,14 @@ import asyncio
 from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.messages import TextMessage
 from autogen_core import CancellationToken
-from . import model_client
+
 
 class TestAgent:
     """
     测试Agent，基于AutoGen AssistantAgent实现。
     支持异步消息处理，便于多Agent协作。
     """
-    def __init__(self):
+    def __init__(self,model_client):
         self.agent = AssistantAgent(
             name="TestAgent",
             system_message="你是单元测试专家，请为给定的Python代码生成高质量的pytest风格单元测试代码。",

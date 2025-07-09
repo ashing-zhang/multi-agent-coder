@@ -2,14 +2,14 @@ import asyncio
 from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.messages import TextMessage
 from autogen_core import CancellationToken
-from . import model_client
+
 
 class FinalizerAgent:
     """
     代码整合Agent，基于AutoGen AssistantAgent实现。
     支持异步消息处理，便于多Agent协作。
     """
-    def __init__(self):
+    def __init__(self,model_client):
         self.agent = AssistantAgent(
             name="FinalizerAgent",
             system_message="你是代码整合专家，请结合原始代码和优化建议，输出最终优化后的完整代码。",

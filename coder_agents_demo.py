@@ -73,4 +73,23 @@ async def main():
 
     await model_client.close()
 
-asyncio.run(main())
+def run_main():
+    try:
+        asyncio.run(main())
+    except RuntimeError as e:
+        if "cannot be called from a running event loop" in str(e):
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                try:
+                    import nest_asyncio
+                    nest_asyncio.apply()
+                except ImportError:
+                    pass
+                loop.run_until_complete(main())
+            else:
+                loop.run_until_complete(main())
+        else:
+            raise
+
+if __name__ == "__main__":
+    run_main()

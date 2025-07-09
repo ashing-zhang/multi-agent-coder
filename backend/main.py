@@ -19,5 +19,5 @@ app.add_middleware(
 app.include_router(api_router)
 
 # 挂载前端静态文件（frontend/src 作为根目录）
-frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "src"))
+frontend_path = 'frontend/src'
 app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")

@@ -10,7 +10,7 @@ from datetime import datetime
 users = [
     User(
         username=f"user{i}",
-        password=f"pass{i}",
+        password=f"ashing_great{i}",
         email=f"user{i}@example.com",
         full_name=f"User {i}",
         avatar=None,
@@ -24,8 +24,6 @@ users = [
 ]
 
 def main():
-    # 创建表
-    User.metadata.create_all(bind=engine)
     db = SessionLocal()
     for user in users:
         db.add(user)

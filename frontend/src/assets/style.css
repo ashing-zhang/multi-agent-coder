@@ -1,6 +1,389 @@
-body { font-family: 'Segoe UI', Arial, sans-serif; background: #f7f8fa; margin: 0; }
-#app { max-width: 1200px; margin: 40px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #eee; padding: 32px; }
-.agent-visual { display: flex; gap: 24px; margin-bottom: 32px; }
-.agent-card { background: #f0f4ff; border-radius: 6px; padding: 18px 24px; box-shadow: 0 1px 4px #e0e7ff; min-width: 180px; text-align: center; }
-.login-form { max-width: 320px; margin: 0 auto 32px; padding: 24px; background: #f9f9f9; border-radius: 6px; box-shadow: 0 1px 4px #eee; }
-.dashboard { margin-top: 24px; }
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f7f8fa;
+    margin: 0;
+    color: #333;
+    line-height: 1.6;
+  }
+  
+  #app {
+    max-width: 1200px;
+    margin: 40px auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    padding: 32px;
+    transition: box-shadow 0.3s ease;
+  }
+  #app:hover {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  }
+  
+  .agent-visual {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 24px;
+    padding: 24px 0;
+    justify-items: center;
+  }
+  
+  .agent-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 12px 16px;
+    transition: box-shadow 0.2s, transform 0.2s;
+    cursor: pointer;
+    min-width: 120px;
+  }
+  .agent-card:hover {
+    box-shadow: 0 4px 20px rgba(79,140,255,0.15);
+    transform: translateY(-4px) scale(1.05);
+  }
+  
+  .agent-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .agent-name {
+    font-size: 15px;
+    color: #222;
+    font-weight: 500;
+    text-align: center;
+    word-break: break-word;
+  }
+  
+  .login-form {
+    max-width: 360px;
+    margin: 0 auto 32px;
+    padding: 24px;
+    background: #fafafa;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  
+  .login-input {
+    width: 100%;
+    margin-bottom: 16px;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 15px;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+  }
+  .login-input:focus {
+    border-color: #4f8cff;
+    outline: none;
+  }
+  
+  .login-btn {
+    width: 100%;
+    padding: 12px;
+    background: rgb(248, 249, 249);
+    color: #1417ad;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .login-btn:hover {
+    background: #2563eb;
+  }
+  
+  .login-btn.small-btn,
+  .logout-btn.small-btn {
+    width: auto;
+    min-width: 80px;
+    padding: 6px 18px;
+    font-size: 15px;
+    border-radius: 5px;
+    margin-left: 10px;
+    margin-right: 10px;
+  }
+  
+  .logout-btn {
+    background: #fbfafa;
+    color: #990c0c;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-size: 15px;
+    cursor: pointer;
+    margin: 12px 0;
+    transition: background 0.2s;
+  }
+  .logout-btn:hover {
+    background: #d9534f;
+  }
+  
+  /* 弹窗通用遮罩 */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* 注册弹窗主容器 */
+  .register-modal-content {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    width: min(90vw, 400px);
+    position: relative;
+    transition: box-shadow 0.2s ease;
+  }
+  .register-modal-content:hover {
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  }
+  
+  /* 按钮样式 */
+  .register-cancel-btn,
+  .modal-close {
+    background: #f5f5f5;
+    color: #666;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 0.6rem 1.4rem;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+  }
+  .register-cancel-btn:hover,
+  .modal-close:hover {
+    background: #e0e0e0;
+    color: #333;
+    border-color: #999;
+  }
+  
+  /* 注册链接 */
+  .register-link-container {
+    margin-top: 18px;
+    text-align: center;
+  }
+  .register-link {
+    color: #4f8cff;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 14px;
+    transition: color 0.2s;
+  }
+  .register-link:hover {
+    color: #2563eb;
+  }
+  
+  /* 适配小屏幕 */
+  @media (max-width: 480px) {
+    .agent-card {
+      padding: 16px 8px;
+    }
+    .agent-avatar {
+      width: 48px;
+      height: 48px;
+    }
+    .register-modal-content {
+      padding: 1rem;
+    }
+  }
+  
+/* 注册表单美化 */
+.register-form {
+  max-width: 320px;
+  margin: 48px auto 0;
+  padding: 28px 20px 20px 20px;
+  background: #fafbff;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.register-form .login-input {
+  width: 240px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  font-size: 15px;
+}
+
+.register-form .login-btn,
+.register-form .register-cancel-btn {
+  width: 240px;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 480px) {
+  .register-form,
+  .register-form .login-input,
+  .register-form .login-btn,
+  .register-form .register-cancel-btn {
+    width: 98vw !important;
+    min-width: 0;
+    max-width: 340px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}
+  
+.banner {
+  width: 80vw;
+  max-width: 700px;
+  margin: 24px auto 18px auto;
+  background: linear-gradient(90deg, #3b82f6 0%, #6366f1 100%);
+  color: #fff;
+  font-size: 1.35rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 10px 0 8px 0;
+  letter-spacing: 1.5px;
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(59,130,246,0.10);
+  font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow 0.2s;
+}
+
+.banner:hover {
+  box-shadow: 0 4px 18px rgba(99,102,241,0.13);
+}
+
+.dashboard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.dashboard-action {
+  background: linear-gradient(90deg, #f0f4ff 0%, #e0e7ff 100%);
+  color: #3b3b4f;
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 1px 6px rgba(99,102,241,0.07);
+  padding: 8px 18px;
+  font-size: 0.98rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background 0.18s, box-shadow 0.18s, color 0.18s, transform 0.15s;
+  outline: none;
+  margin: 0;
+  min-width: 90px;
+}
+
+.dashboard-action:hover, .dashboard-action:focus {
+  background: linear-gradient(90deg, #6366f1 0%, #3b82f6 100%);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(59,130,246,0.11);
+  transform: translateY(-1px) scale(1.03);
+}
+
+.dashboard-action-active {
+  background: linear-gradient(90deg, #e0e7ff 0%, #c7d2fe 100%) !important;
+  color: #222 !important;
+  border: 1.5px solid #6366f1;
+  box-shadow: 0 2px 10px rgba(99,102,241,0.13);
+}
+
+.dashboard-authbar {
+  position: fixed;
+  top: 24px;
+  right: 40px;
+  display: flex;
+  gap: 12px;
+  z-index: 100;
+}
+
+@media (max-width: 600px) {
+  .dashboard-authbar {
+    top: 10px;
+    right: 6vw;
+    gap: 6px;
+  }
+}
+
+.dashboard {
+  position: relative;
+}
+
+.agent-form h4 {
+  font-size: 1.13rem;
+  font-weight: 600;
+  color: #3b82f6;
+  margin: 0 0 12px 0;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.agent-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #fafdff;
+  border-radius: 10px;
+  box-shadow: 0 1px 8px rgba(59,130,246,0.06);
+  padding: 18px 18px 10px 18px;
+  margin: 18px auto 0 auto;
+  max-width: 340px;
+}
+
+.agent-form label {
+  display: block;
+  font-size: 0.98rem;
+  color: #444;
+  margin-bottom: 4px;
+  margin-top: 10px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.agent-form input.login-input,
+.agent-form textarea.login-input {
+  width: 100%;
+  max-width: 280px;
+  margin-bottom: 8px;
+  padding: 9px 12px;
+  border: 1px solid #b6c6e6;
+  border-radius: 6px;
+  font-size: 15px;
+  box-sizing: border-box;
+  background: #f5f8ff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  resize: vertical;
+}
+
+.agent-form input.login-input:focus,
+.agent-form textarea.login-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px #dbeafe;
+  outline: none;
+}
+
+.agent-form textarea.login-input {
+  min-height: 56px;
+  max-height: 120px;
+}
+
+.agent-form .login-btn.small-btn,
+.agent-form .register-cancel-btn {
+  margin-top: 8px;
+}

@@ -5,20 +5,32 @@ from sqlalchemy.orm import Session
 from backend.core.database import SessionLocal
 from backend.models.user import User as UserModel
 from sqlalchemy.exc import IntegrityError
+from datetime import datetime
+from typing import Optional
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 class UserOut(BaseModel):
     username: str
-    role: str
+    email: str
+    full_name: Optional[str] = None
+    avatar: Optional[str] = None
+    phone: Optional[str] = None
+    is_active: bool
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    last_login: Optional[datetime] = None
     class Config:
         orm_mode = True
 
 class RegisterRequest(BaseModel):
     username: str
     password: str
-    role: str = "user"
+    email: str
+    full_name: str | None = None
+    avatar: str | None = None
+    phone: str | None = None
 
 def get_db():
     db = SessionLocal()
@@ -29,14 +41,22 @@ def get_db():
 
 @router.post("/register", response_model=UserOut)
 def register(data: RegisterRequest, db: Session = Depends(get_db)):
-    user = UserModel(username=data.username, password=data.password, role=data.role)
+    user = UserModel(
+        username=data.username,
+        password=data.password,
+        email=data.email,
+        full_name=data.full_name,
+        avatar=data.avatar,
+        phone=data.phone,
+        is_active=True
+    )
     db.add(user)
     try:
         db.commit()
         db.refresh(user)
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="用户名已存在")
+        raise HTTPException(status_code=400, detail="用户名或邮箱已存在")
     return user
 
 @router.post("/token")

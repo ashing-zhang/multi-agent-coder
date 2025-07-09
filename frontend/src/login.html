@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>登录</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div id="login-app"></div>
+  <script src="components/login.js"></script>
+  <script>
+    document.getElementById('login-app').appendChild(window.renderLogin(() => {
+      window.location.href = 'index.html';
+    }));
+  </script>
+</body>
+</html> 

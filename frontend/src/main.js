@@ -1,22 +1,33 @@
-// 前端主入口
-async function main() {
-    const app = document.getElementById('app');
+// 主入口加载dashboard
+import { renderDashboard } from './components/dashboard.js';
+// 如有其它组件需要import，可在此处添加
+
+function checkLogin() {
     const token = localStorage.getItem('token');
-    if (!token) {
-        app.appendChild(window.renderLogin(() => location.reload()));
-        return;
-    }
-    // 获取用户信息
-    const res = await fetch('/user/profile', {
-        headers: { 'Authorization': 'Bearer ' + token }
-    });
-    if (res.ok) {
-        const user = await res.json();
-        app.appendChild(window.renderDashboard(user));
-    } else {
-        localStorage.removeItem('token');
-        location.reload();
-    }
+    return !!token;
 }
 
-main();
+function handleDashboardAction(action) {
+    if (!checkLogin()) {
+        alert('请先登录！');
+        window.location.href = 'login.html';
+        return;
+    }
+    action();
+}
+
+function renderMain() {
+    const app = document.getElementById('app');
+    app.innerHTML = '';
+    const dashboard = renderDashboard({
+        onLogin: () => window.location.href = 'login.html',
+        onLogout: () => {
+            localStorage.removeItem('token');
+            window.location.reload();
+        },
+        onAction: handleDashboardAction
+    });
+    app.appendChild(dashboard);
+}
+
+renderMain();

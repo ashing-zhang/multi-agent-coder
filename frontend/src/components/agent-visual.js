@@ -14,8 +14,19 @@ function renderAgents() {
     agents.forEach(agent => {
         const card = document.createElement('div');
         card.className = 'agent-card';
-        card.style.borderTop = `4px solid ${agent.color}`;
-        card.innerHTML = `<strong>${agent.name}</strong>`;
+
+        // 圆形色块
+        const avatar = document.createElement('div');
+        avatar.className = 'agent-avatar';
+        avatar.style.background = agent.color;
+
+        // 名称
+        const name = document.createElement('div');
+        name.className = 'agent-name';
+        name.textContent = agent.name;
+
+        card.appendChild(avatar);
+        card.appendChild(name);
         container.appendChild(card);
     });
     return container;
