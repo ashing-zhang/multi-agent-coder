@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>历史需求会话</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <style>
+        .history-page-container {
+            max-width: 700px;
+            margin: 48px auto 0 auto;
+            padding: 24px 12px 32px 12px;
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 2px 16px rgba(59,130,246,0.08);
+        }
+        .history-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2563eb;
+            margin-bottom: 18px;
+            text-align: center;
+        }
+        .history-back-btn {
+            position: absolute;
+            left: 24px;
+            top: 24px;
+            background: #f3f4f6;
+            color: #2563eb;
+            border: 1.5px solid #c7d2fe;
+            border-radius: 7px;
+            padding: 6px 18px;
+            font-size: 15px;
+            cursor: pointer;
+        }
+        .history-back-btn:hover {
+            background: #e0e7ff;
+            color: #1d4ed8;
+        }
+    </style>
+</head>
+<body>
+    <button class="history-back-btn" onclick="window.location.href='../index.html'">← 返回仪表盘</button>
+    <div class="history-page-container">
+        <div class="history-header">历史需求会话</div>
+        <div id="history-content"></div>
+    </div>
+    <script type="module" src="components/history.js"></script>
+</body>
+</html> 

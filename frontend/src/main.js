@@ -1,33 +1,36 @@
 // 主入口加载dashboard
-import { renderDashboard } from './components/dashboard.js';
+import { renderDashboard, renderDashboardAuthbar } from './components/dashboard.js';
 // 如有其它组件需要import，可在此处添加
 
-function checkLogin() {
-    const token = localStorage.getItem('token');
-    return !!token;
-}
-
-function handleDashboardAction(action) {
-    if (!checkLogin()) {
-        alert('请先登录！');
-        window.location.href = 'login.html';
+async function renderMain() {
+    const authbarContainer = document.getElementById('dashboard-authbar-container');
+    const dashboardRoot = document.getElementById('dashboard-root');
+    if (!authbarContainer || !dashboardRoot) {
+        console.error('Authbar or dashboard root container not found!');
         return;
     }
-    action();
-}
+    dashboardRoot.innerHTML = '';
+    authbarContainer.innerHTML = '';
 
-function renderMain() {
-    const app = document.getElementById('app');
-    app.innerHTML = '';
+    // 渲染dashboard主体，并传入onAuthbar回调
     const dashboard = renderDashboard({
-        onLogin: () => window.location.href = 'login.html',
+        onLogin: () => window.location.href = 'index.html',
         onLogout: () => {
             localStorage.removeItem('token');
             window.location.reload();
         },
-        onAction: handleDashboardAction
+        onAction: action => action(),
+        onAuthbar: (userinfo, apiKeyBtnHtml, isLoggedIn, props) => {
+            authbarContainer.innerHTML = '';
+            const authbar = renderDashboardAuthbar(userinfo, apiKeyBtnHtml, isLoggedIn, props);
+            authbarContainer.appendChild(authbar);
+        }
     });
-    app.appendChild(dashboard);
+    dashboardRoot.appendChild(dashboard);
 }
 
-renderMain();
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderMain);
+} else {
+    renderMain();
+} 

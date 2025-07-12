@@ -22,6 +22,8 @@ function renderLogin(onLogin) {
         if (res.ok) {
             const data = await res.json();
             localStorage.setItem('token', data.access_token);
+            window.location.href = 'index.html';
+            // 如果传入了 onLogin 回调函数，则调用它
             onLogin && onLogin();
         } else {
             alert('登录失败');

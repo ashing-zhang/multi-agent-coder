@@ -1,17 +1,32 @@
-from coder_agents_demo import model_client
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from backend.agents.set_key import set_deepseek_api_key
+from sqlalchemy.orm import Session
+from backend.models.user import User as UserModel
+from backend.core.database import get_db
+from fastapi.security import OAuth2PasswordBearer
+from backend.auth.process_token import decode_access_token
 
 router = APIRouter()
 
-class APIKeyIn(BaseModel):
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
+
+class SetKeyRequest(BaseModel):
     api_key: str
 
-@router.post("/api/set_deepseek_key")
-def set_deepseek_key_api(data: APIKeyIn):
-    try:
-        model_client = set_deepseek_api_key(data.api_key)
-        return {"success": True, "model_client": model_client}
-    except Exception as e:
-        return {"success": False, "error": str(e)} 
+def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+    payload = decode_access_token(token)
+    username = payload.get("sub")
+    user = db.query(UserModel).filter(UserModel.username == username).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="无效token")
+    return user
+
+@router.post("/set_key")
+def set_api_key(
+    data: SetKeyRequest,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    current_user.api_key = data.api_key
+    db.commit()
+    return {"api_key": current_user.api_key}

@@ -1,5 +1,4 @@
 from autogen_ext.models.openai import OpenAIChatCompletionClient
-from backend.agents.model_client_manager import set_model_client
 
 def set_deepseek_api_key(api_key):
     client = OpenAIChatCompletionClient(
@@ -18,5 +17,4 @@ def set_deepseek_api_key(api_key):
             "family": "unknown"
         }
     )
-    set_model_client(client)
-    return True
+    return client

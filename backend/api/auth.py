@@ -2,19 +2,24 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from backend.core.database import SessionLocal
 from backend.models.user import User as UserModel
+from backend.auth import decode_access_token,create_access_token
+from backend.core.database import get_db
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Optional
+import jwt as pyjwt
+from .set_key import get_current_user
 
 router = APIRouter()
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 class UserOut(BaseModel):
     username: str
     email: str
     full_name: Optional[str] = None
+    api_key: Optional[str] = None
     avatar: Optional[str] = None
     phone: Optional[str] = None
     is_active: bool
@@ -28,16 +33,10 @@ class RegisterRequest(BaseModel):
     username: str
     password: str
     email: str
-    full_name: str | None = None
-    avatar: str | None = None
-    phone: str | None = None
+    full_name: Optional[str] = None
+    avatar: Optional[str] = None
+    phone: Optional[str] = None
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 @router.post("/register", response_model=UserOut)
 def register(data: RegisterRequest, db: Session = Depends(get_db)):
@@ -64,12 +63,21 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     user = db.query(UserModel).filter(UserModel.username == form_data.username).first()
     if not user or user.password != form_data.password:
         raise HTTPException(status_code=400, detail="用户名或密码错误")
-    return {"access_token": user.username + "-token", "token_type": "bearer"}
+    access_token = create_access_token(data={"sub": user.username})
+    # print('access_token:',access_token)
+    return {"access_token": access_token, "token_type": "bearer"}
 
-@router.get("/me", response_model=UserOut)
-def get_me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    username = token.replace("-token", "")
+@router.get("/userinfo", response_model=UserOut)
+def get_userinfo(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    return get_current_user(db,token)
+
+@router.get("/validate_token")
+def validate_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    payload = decode_access_token(token)
+    username = payload.get("sub")
+    if not username:
+        raise HTTPException(status_code=401, detail="无效token")
     user = db.query(UserModel).filter(UserModel.username == username).first()
     if not user:
         raise HTTPException(status_code=401, detail="无效token")
-    return user
+    return {"valid": True, "username": username}
