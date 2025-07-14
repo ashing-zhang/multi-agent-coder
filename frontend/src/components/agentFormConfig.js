@@ -1,6 +1,7 @@
 // agentFormConfig.js
 // 各 Agent 表单的配置项
 
+
 export const agentFormConfig = {
     requirement: {
         title: '生成任务的需求文档',
@@ -52,3 +53,4 @@ export const agentFormConfig = {
         ]
     }
 }; 
+

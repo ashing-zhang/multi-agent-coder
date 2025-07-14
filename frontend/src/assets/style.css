@@ -691,3 +691,176 @@ body {
     font-size: 13px;
   }
 }
+
+/* 自定义弹窗样式变量 */
+:root {
+  /* 警告类型颜色 */
+  --warning-bg: #fef3c7;
+  --warning-border: #fde68a;
+  --warning-text: #d97706;
+  
+  /* 错误类型颜色 */
+  --error-bg: #fee2e2;
+  --error-border: #fecaca;
+  --error-text: #b91c1c;
+  
+  /* 成功类型颜色 */
+  --success-bg: #e6fbe6;
+  --success-border: #a7f3d0;
+  --success-text: #15803d;
+  
+  /* 提示类型颜色 */
+  --info-bg: #e6f0ff;
+  --info-border: #b6d4fe;
+  --info-text: #2563eb;
+  
+  /* 弹窗通用样式 */
+  --dialog-bg: rgba(0, 0, 0, 0.5);
+  --dialog-content-bg: white;
+  --dialog-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  --dialog-border-radius: 12px;
+  --dialog-padding: 24px 32px;
+  --dialog-min-width: 320px;
+  --dialog-max-width: 480px;
+  
+  /* 按钮样式 */
+  --btn-padding: 10px 24px;
+  --btn-border-radius: 6px;
+  --btn-font-size: 14px;
+  --btn-font-weight: 500;
+  --btn-min-width: 80px;
+  --btn-transition: all 0.2s;
+  
+  /* 文字样式 */
+  --title-font-size: 18px;
+  --title-font-weight: 600;
+  --title-color: #1f2937;
+  --message-font-size: 15px;
+  --message-color: #6b7280;
+  --icon-font-size: 48px;
+}
+
+/* 自定义弹窗容器 */
+.custom-warning-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: var(--dialog-bg);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* 弹窗内容 */
+.custom-warning-content {
+  background: var(--dialog-content-bg);
+  padding: var(--dialog-padding);
+  border-radius: var(--dialog-border-radius);
+  box-shadow: var(--dialog-shadow);
+  min-width: var(--dialog-min-width);
+  max-width: var(--dialog-max-width);
+  text-align: center;
+  animation: slideIn 0.3s ease-out;
+}
+
+/* 弹窗图标 */
+.custom-warning-icon {
+  font-size: var(--icon-font-size);
+  margin-bottom: 16px;
+  line-height: 1;
+}
+
+/* 弹窗标题 */
+.custom-warning-title {
+  font-size: var(--title-font-size);
+  font-weight: var(--title-font-weight);
+  color: var(--title-color);
+  margin-bottom: 8px;
+}
+
+/* 弹窗消息 */
+.custom-warning-message {
+  font-size: var(--message-font-size);
+  color: var(--message-color);
+  line-height: 1.5;
+  margin-bottom: 24px;
+  word-wrap: break-word;
+}
+
+/* 弹窗按钮 */
+.custom-warning-btn {
+  padding: var(--btn-padding);
+  border-radius: var(--btn-border-radius);
+  font-size: var(--btn-font-size);
+  font-weight: var(--btn-font-weight);
+  cursor: pointer;
+  transition: var(--btn-transition);
+  min-width: var(--btn-min-width);
+  border: 1px solid;
+}
+
+.custom-warning-btn:hover {
+  opacity: 0.8;
+}
+
+/* 不同类型按钮样式 */
+.custom-warning-btn.warning {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  border-color: var(--warning-border);
+}
+
+.custom-warning-btn.error {
+  background: var(--error-bg);
+  color: var(--error-text);
+  border-color: var(--error-border);
+}
+
+.custom-warning-btn.success {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border-color: var(--success-border);
+}
+
+.custom-warning-btn.info {
+  background: var(--info-bg);
+  color: var(--info-text);
+  border-color: var(--info-border);
+}
+
+/* 弹窗动画 */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+  .custom-warning-content {
+    margin: 20px;
+    padding: 20px 24px;
+    min-width: 280px;
+  }
+  
+  .custom-warning-icon {
+    font-size: 40px;
+  }
+  
+  .custom-warning-title {
+    font-size: 16px;
+  }
+  
+  .custom-warning-message {
+    font-size: 14px;
+  }
+}

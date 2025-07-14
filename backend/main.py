@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from backend.api import router as api_router
-import os
 
 app = FastAPI(title="Multi-Agent 协作平台")
 

@@ -1,34 +1,27 @@
 // 主入口加载dashboard
-import { renderDashboard, renderDashboardAuthbar } from './components/dashboard.js';
+import { renderDashboard } from './components/dashboard.js';
 // 如有其它组件需要import，可在此处添加
 
 async function renderMain() {
-    const authbarContainer = document.getElementById('dashboard-authbar-container');
-    const dashboardRoot = document.getElementById('dashboard-root');
-    if (!authbarContainer || !dashboardRoot) {
-        console.error('Authbar or dashboard root container not found!');
-        return;
-    }
-    dashboardRoot.innerHTML = '';
-    authbarContainer.innerHTML = '';
-
-    // 渲染dashboard主体，并传入onAuthbar回调
-    const dashboard = renderDashboard({
-        onLogin: () => window.location.href = 'index.html',
-        onLogout: () => {
+    const { main, authbar, history } = renderDashboard({
+        onLogin: async () => {
+            window.location.href = 'index.html';
+        },
+        onLogout: async () => {
             localStorage.removeItem('token');
             window.location.reload();
-        },
-        onAction: action => action(),
-        onAuthbar: (userinfo, apiKeyBtnHtml, isLoggedIn, props) => {
-            authbarContainer.innerHTML = '';
-            const authbar = renderDashboardAuthbar(userinfo, apiKeyBtnHtml, isLoggedIn, props);
-            authbarContainer.appendChild(authbar);
         }
     });
-    dashboardRoot.appendChild(dashboard);
-}
+    // 插入到页面指定容器
+    document.getElementById('dashboard-root').appendChild(main);
+    document.getElementById('dashboard-authbar-container').appendChild(authbar);
+    // history（左上角历史按钮）如果有内容，可以插入到 body 或 dashboard-root 前
+    if (history && history.innerHTML.trim()) {
+        document.body.insertBefore(history, document.getElementById('dashboard-root'));
+    }
+}    
 
+// 确保 renderMain 函数在 DOM 树构建完成后执行
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', renderMain);
 } else {

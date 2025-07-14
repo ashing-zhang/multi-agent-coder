@@ -3,6 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
 from dotenv import load_dotenv
+from fastapi.security import OAuth2PasswordBearer
 
 # 自动加载.env文件（当前工作目录）
 load_dotenv('.env')
@@ -21,9 +22,13 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 #  返回一个基类，所有数据库模型类都需要继承该基类
 Base = declarative_base()
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
+
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
+

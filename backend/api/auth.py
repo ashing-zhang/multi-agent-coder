@@ -2,14 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from backend.models.user import User as UserModel
-from backend.auth import decode_access_token,create_access_token
-from backend.core.database import get_db
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from typing import Optional
-import jwt as pyjwt
-from .set_key import get_current_user
+from ..models.user import User as UserModel
+from ..auth import decode_access_token,create_access_token
+from ..core.database import get_db
+from ..core.utils import get_current_user
 
 router = APIRouter()
 
