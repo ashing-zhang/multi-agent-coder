@@ -1,4 +1,4 @@
-import { getToken, validateToken} from './auth.js';
+import { getToken, validateToken } from './auth.js';
 import { agentFormConfig } from './agentFormConfig.js';
 import {
     onSubmitRequirement,
@@ -66,11 +66,11 @@ async function showAgentForm(container, type, onSubmit) {
     config.fields.forEach(field => {
         html += `<label for="agent-${type}-${field.name}">${field.label}</label>`;
         if (field.type === 'input') {
-            html += `<input id="agent-${type}-${field.name}" name="${field.name}" placeholder="${field.placeholder || ''}" class="login-input" ${field.required ? 'required' : ''} />`;
+            html += `<input id="agent-${type}-${field.name}" name="${field.name}" placeholder="${field.placeholder || ''}" class="login-input" />`;
         } else if (field.type === 'textarea') {
-            html += `<textarea id="agent-${type}-${field.name}" name="${field.name}" placeholder="${field.placeholder || ''}" class="login-input" ${field.required ? 'required' : ''}></textarea>`;
+            html += `<textarea id="agent-${type}-${field.name}" name="${field.name}" placeholder="${field.placeholder || ''}" class="login-input"></textarea>`;
         } else if (field.type === 'file') {
-            html += `<input id="agent-${type}-${field.name}" name="${field.name}" type="file" class="login-input" ${field.accept ? `accept='${field.accept}'` : ''} ${field.required ? 'required' : ''} />`;
+            html += `<input id="agent-${type}-${field.name}" name="${field.name}" type="file" class="login-input" ${field.accept ? `accept='${field.accept}'` : ''} ${field.required ? 'required' : ''} multiple />`;
         }
     });
     html += `<div style="margin-top:10px;">
@@ -78,7 +78,7 @@ async function showAgentForm(container, type, onSubmit) {
             <button type="button" class="register-cancel-btn" id="agent-cancel">取消</button>
         </div>`;
     form.innerHTML = html;
-    
+
     // 当表单提交时触发此事件处理函数
     form.onsubmit = async (e) => {
         // 阻止表单的默认提交行为（防止页面刷新）
@@ -90,39 +90,39 @@ async function showAgentForm(container, type, onSubmit) {
     formArea.appendChild(form);
 }
 
-// 获取当前用户信息（含api_key）
-async function fetchUserInfo(token) {
-    if (!token) return null;
-    // 通过在请求头中添加Authorization: Bearer <token>，后端可以根据token识别用户并返回其信息
-    const res = await fetch('/auth/userinfo', {
-        headers: { 'Authorization': 'Bearer ' + token }
-    });
-    if (!res.ok) return null;
-    return await res.json();
-}
+    // 获取当前用户信息（含api_key）
+    async function fetchUserInfo(token) {
+        if (!token) return null;
+        // 通过在请求头中添加Authorization: Bearer <token>，后端可以根据token识别用户并返回其信息
+        const res = await fetch('/auth/userinfo', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) return null;
+        return await res.json();
+    }
 
-// 检查并设置API Key按钮的初始状态
+        // 检查并设置API Key按钮的初始状态
 async function updateApiKeyButtonState(container, apiKey) {
     //querySelector：CSS选择器
-    const apiKeyBtn = container.querySelector('#show-apikey-btn');
-    if (apiKeyBtn && apiKey) {
-        apiKeyBtn.textContent = 'API Key已设置';
-        apiKeyBtn.style.background = '#e6fbe6';
-        apiKeyBtn.style.color = '#15803d';
-        apiKeyBtn.style.border = '1px solid #a7f3d0';
-    } else if (apiKeyBtn) {
-        apiKeyBtn.textContent = '设置API Key';
-        apiKeyBtn.style.background = '';
-        apiKeyBtn.style.color = '';
-        apiKeyBtn.style.border = '';
-    }
-}
+            const apiKeyBtn = container.querySelector('#show-apikey-btn');
+            if (apiKeyBtn && apiKey) {
+                apiKeyBtn.textContent = 'API Key已设置';
+                apiKeyBtn.style.background = '#e6fbe6';
+                apiKeyBtn.style.color = '#15803d';
+                apiKeyBtn.style.border = '1px solid #a7f3d0';
+            } else if (apiKeyBtn) {
+                apiKeyBtn.textContent = '设置API Key';
+                apiKeyBtn.style.background = '';
+                apiKeyBtn.style.color = '';
+                apiKeyBtn.style.border = '';
+            }
+        }
 
 // 异步校验token有效性
-async function checkLoginValid() {
+async function checkLoginValid(node) {
     const token = localStorage.getItem('token');
     if (!token) {
-        showLoginRequiredDialog();
+        showLoginRequiredDialog(node);
         return false;
     }
     try {
@@ -133,43 +133,43 @@ async function checkLoginValid() {
         if (res.ok) return true;
         if (res.status === 401) {
             localStorage.removeItem('token');
-            showLoginRequiredDialog();
+            showLoginRequiredDialog(node);
         }
         return false;
     } catch {
-        showLoginRequiredDialog();
+        showLoginRequiredDialog(node);
         return false;
     }
 }
 
 //登录事件
-async function login_event(container){
-    const loginBtn = container.querySelector('#dashboard-login');
-    if (loginBtn) {
-        loginBtn.onclick = () => {
-            window.location.href = 'login.html';
-        };
-    }
+async function login_event(container) {
+        const loginBtn = container.querySelector('#dashboard-login');
+        if (loginBtn) {
+            loginBtn.onclick = () => {
+                window.location.href = 'login.html';
+            };
+        }
 }
 
 //登出事件
-async function logout_event(container, logout_func){
-    const logoutBtn = container.querySelector('#dashboard-logout');
-    if (logoutBtn) {
-        logoutBtn.onclick = async () => {
-            try {
-                const token = localStorage.getItem('token');
+async function logout_event(container, logout_func) {
+        const logoutBtn = container.querySelector('#dashboard-logout');
+        if (logoutBtn) {
+            logoutBtn.onclick = async () => {
+                try {
+                    const token = localStorage.getItem('token');
                 if (token && logout_func) logout_func();
-            } catch (e) {
-                console.error('Logout error:', e);
-                localStorage.removeItem('token');
-            }
-        };
-    }
+                } catch (e) {
+                    console.error('Logout error:', e);
+                    localStorage.removeItem('token');
+                }
+            };
+        }
 }
 
 // 显示自定义“请先登录”弹窗
-async function showLoginRequiredDialog() {
+async function showLoginRequiredDialog(node) {
     // 如果页面上已经存在id为'login-required-dialog'的弹窗，则不再重复创建，直接返回
     if (document.getElementById('login-required-dialog')) return;
     const dialog = document.createElement('div');
@@ -182,12 +182,22 @@ async function showLoginRequiredDialog() {
         </div>
     `;
     document.body.appendChild(dialog);
+    // 新增：弹窗关闭时重新渲染 Authbar 为未登录状态
+    const rerenderAuthbarAsLoggedOut = () => {
+        let authbar = node;
+        if (authbar) {
+            let apiKeyBtnHtml = `<button class=\"login-btn small-btn\" id=\"show-apikey-btn\" type=\"button\" style=\"margin-left:18px;\">设置API Key</button>`;
+            renderDashboardAuthbar(authbar, apiKeyBtnHtml, false, {});
+        }
+    };
     dialog.querySelector('#login-required-ok-btn').onclick = () => {
         document.body.removeChild(dialog);
+        rerenderAuthbarAsLoggedOut();
     };
     dialog.addEventListener('click', (e) => {
         if (e.target === dialog) {
             document.body.removeChild(dialog);
+            rerenderAuthbarAsLoggedOut();
         }
     });
 }
@@ -199,7 +209,7 @@ async function warning(message, type = 'warning') {
     if (existingDialog) {
         document.body.removeChild(existingDialog);
     }
-    
+
     // 根据类型设置不同的图标和标题
     let icon, title;
     switch (type) {
@@ -220,11 +230,11 @@ async function warning(message, type = 'warning') {
             title = '警告';
             break;
     }
-    
+
     const dialog = document.createElement('div');
     dialog.id = 'custom-warning-dialog';
     dialog.className = 'custom-warning-dialog';
-    
+
     dialog.innerHTML = `
         <div class="custom-warning-content">
             <div class="custom-warning-icon">${icon}</div>
@@ -235,22 +245,22 @@ async function warning(message, type = 'warning') {
             </button>
         </div>
     `;
-    
+
     document.body.appendChild(dialog);
-    
+
     // 绑定确定按钮事件
     const okBtn = dialog.querySelector('#warning-ok-btn');
     okBtn.onclick = () => {
         document.body.removeChild(dialog);
     };
-    
+
     // 点击背景关闭弹窗
     dialog.addEventListener('click', (e) => {
         if (e.target === dialog) {
             document.body.removeChild(dialog);
         }
     });
-    
+
     // 按 ESC 键关闭弹窗
     const handleEsc = (e) => {
         if (e.key === 'Escape') {
@@ -259,61 +269,61 @@ async function warning(message, type = 'warning') {
         }
     };
     document.addEventListener('keydown', handleEsc);
-    
+
     // 自动聚焦到确定按钮
     okBtn.focus();
 }
 
-async function all_agent_actions(container) {
+async function all_agent_actions(main_container, auth_container) {
     const agentActions = {
         requirement: async () => {
-            if (!(await checkLoginValid())) {
+            if (!(await checkLoginValid(auth_container))) {
                 return;
             }
-            await showAgentForm(container, 'requirement', (form, resultArea) => onSubmitRequirement(form, resultArea));
+            await showAgentForm(main_container, 'requirement', (form, resultArea) => onSubmitRequirement(form, resultArea));
         },
         agent_workflow: async () => {
-            if (!(await checkLoginValid())) {
+            if (!(await checkLoginValid(auth_container))) {
                 return;
             }
-            await showAgentForm(container, 'agent_workflow', (form, resultArea) => onSubmitAgentWorkflow(form, resultArea));
+            await showAgentForm(main_container, 'agent_workflow', (form, resultArea) => onSubmitAgentWorkflow(form, resultArea));
         },
         doc: async () => {
-            if (!(await checkLoginValid())) {
+            if (!(await checkLoginValid(auth_container))) {
                 return;
             }
-            await showAgentForm(container, 'doc', (form, resultArea) => onSubmitDoc(form, resultArea));
+            await showAgentForm(main_container, 'doc', (form, resultArea) => onSubmitDoc(form, resultArea));
         },
         coder: async () => {
-            if (!(await checkLoginValid())) {
+            if (!(await checkLoginValid(auth_container))) {
                 return;
             }
-            await showAgentForm(container, 'coder', (form, resultArea) => onSubmitCoder(form, resultArea));
+            await showAgentForm(main_container, 'coder', (form, resultArea) => onSubmitCoder(form, resultArea));
         },
         reviewer: async () => {
-            if (!(await checkLoginValid())) {
+            if (!(await checkLoginValid(auth_container))) {
                 return;
             }
-            await showAgentForm(container, 'reviewer', (form, resultArea) => onSubmitReviewer(form, resultArea));
+            await showAgentForm(main_container, 'reviewer', (form, resultArea) => onSubmitReviewer(form, resultArea));
         },
         finalizer: async () => {
-            if (!(await checkLoginValid())) {
+            if (!(await checkLoginValid(auth_container))) {
                 return;
             }
-            await showAgentForm(container, 'finalizer', (form, resultArea) => onSubmitFinalizer(form, resultArea));
+            await showAgentForm(main_container, 'finalizer', (form, resultArea) => onSubmitFinalizer(form, resultArea));
         },
         test: async () => {
-            if (!(await checkLoginValid())) {
+            if (!(await checkLoginValid(auth_container))) {
                 return;
             }
-            await showAgentForm(container, 'test', (form, resultArea) => onSubmitTest(form, resultArea));
+            await showAgentForm(main_container, 'test', (form, resultArea) => onSubmitTest(form, resultArea));
         }
     };
 
     return agentActions;
 }
 
-async function agent_event(container, agentActions){
+async function agent_event(container, agentActions) {
     container.querySelectorAll('.dashboard-action').forEach(btn => {
         // 将 onclick 的处理器直接声明为 async 函数
         // 当一个事件（比如用户的点击 click、鼠标悬停 mouseover、键盘按下 
@@ -326,7 +336,7 @@ async function agent_event(container, agentActions){
             container.querySelectorAll('.dashboard-action').forEach(b => b.classList.remove('dashboard-action-active'));
             // 给当前点击的按钮添加高亮状态
             btn.classList.add('dashboard-action-active');
-    
+
             // 2. 直接执行异步逻辑（修正部分）
             try {
                 const action = btn.dataset.action;
@@ -339,7 +349,7 @@ async function agent_event(container, agentActions){
                 console.error("执行Action时出错:", error);
                 await warning("操作失败，请查看控制台。", 'error');
             }
-            
+
             // 3. 阻止冒泡（不变）
             event.stopPropagation();
         };
@@ -351,161 +361,174 @@ async function initializeDashboardFeatures(nodes, userinfo, logout_func) {
     // 登录/退出事件
     login_event(nodes[1]);
     logout_event(nodes[1], logout_func);
-    
-    // API Key 弹窗逻辑
-    let apiKeyDialog = null;
+
+        // API Key 弹窗逻辑
+        let apiKeyDialog = null;
     const apiKeyBtn = nodes[1].querySelector('#show-apikey-btn');
-    if (apiKeyBtn) {
-        apiKeyBtn.onclick = () => {
-            // 如果API Key已经设置，显示清除选项
-            if (userinfo && userinfo.api_key) {
-                // 如果已经存在API Key清除弹窗，则不再重复创建，直接返回
-                if (document.getElementById('apikey-clear-dialog')) return;
-                const clearDialog = document.createElement('div');
-                clearDialog.id = 'apikey-clear-dialog';
-                clearDialog.style = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.18);z-index:9999;display:flex;align-items:center;justify-content:center;';
-                clearDialog.innerHTML = `
-                    <div style="background:#fff;padding:28px 32px 18px 32px;border-radius:12px;box-shadow:0 4px 24px #888;min-width:320px;display:flex;flex-direction:column;align-items:center;">
-                        <div style="font-size:16px;color:#222;margin-bottom:18px;">API Key已设置。是否要清除当前的API Key？</div>
-                        <div style="display:flex;gap:12px;">
-                          <button id="clear-apikey-confirm-btn" class="login-btn small-btn" type="button">确定</button>
-                          <button id="clear-apikey-cancel-btn" class="register-cancel-btn" type="button">取消</button>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(clearDialog);
-                clearDialog.querySelector('#clear-apikey-confirm-btn').onclick = async () => {
-                    // 清除API Key
-                    const token = getToken();
-                    // 这段代码通过向后端接口 /api/set_key 发送POST请求，将 api_key 设为空字符串，从而清除用户当前设置的API Key。
-                    // 请求头中包含了Content-Type和用户的Bearer Token用于身份验证。
-                    await fetch('/api/set_key', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                        body: JSON.stringify({ api_key: '' })
-                    });
-                    // 关闭API Key清除弹窗
-                    document.body.removeChild(clearDialog);
-                    // 重新获取用户信息，确保前端状态与后端同步
-                    const newUserinfo = await fetchUserInfo(token);
-                    // 根据最新的API Key状态，更新按钮的显示（如禁用/启用、文字变化等）
-                    updateApiKeyButtonState(newUserinfo.api_key);
-                    // 更新本地的用户信息对象，保持数据一致
-                    userinfo.api_key = newUserinfo.api_key;
-                    // 美化弹窗：API Key已清除
-                    if (!document.getElementById('apikey-cleared-dialog')) {
-                        const dialog = document.createElement('div');
-                        dialog.id = 'apikey-cleared-dialog';
-                        dialog.style = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.18);z-index:9999;display:flex;align-items:center;justify-content:center;';
-                        dialog.innerHTML = `
-                            <div style="background:#fff;padding:28px 32px 18px 32px;border-radius:12px;box-shadow:0 4px 24px #888;min-width:320px;display:flex;flex-direction:column;align-items:center;">
-                                <div style="font-size:16px;color:#15803d;margin-bottom:18px;">API Key已清除</div>
-                                <button id="apikey-cleared-ok-btn" class="login-btn small-btn" type="button" style="min-width:80px;">确定</button>
+        if (apiKeyBtn) {
+            apiKeyBtn.onclick = () => {
+                // 如果API Key已经设置，显示清除选项
+                if (userinfo && userinfo.api_key) {
+                    // 如果已经存在API Key清除弹窗，则不再重复创建，直接返回
+                    if (document.getElementById('apikey-clear-dialog')) return;
+                    const clearDialog = document.createElement('div');
+                    clearDialog.id = 'apikey-clear-dialog';
+                    clearDialog.style = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.18);z-index:9999;display:flex;align-items:center;justify-content:center;';
+                    clearDialog.innerHTML = `
+                        <div style="background:#fff;padding:28px 32px 18px 32px;border-radius:12px;box-shadow:0 4px 24px #888;min-width:320px;display:flex;flex-direction:column;align-items:center;">
+                            <div style="font-size:16px;color:#222;margin-bottom:18px;">API Key已设置。是否要清除当前的API Key？</div>
+                            <div style="display:flex;gap:12px;">
+                              <button id="clear-apikey-confirm-btn" class="login-btn small-btn" type="button">确定</button>
+                              <button id="clear-apikey-cancel-btn" class="register-cancel-btn" type="button">取消</button>
                             </div>
-                        `;
-                        document.body.appendChild(dialog);
-                        dialog.querySelector('#apikey-cleared-ok-btn').onclick = () => {
-                            document.body.removeChild(dialog);
-                        };
-                        dialog.addEventListener('click', (e) => {
-                            if (e.target === dialog) {
-                                document.body.removeChild(dialog);
-                            }
+                        </div>
+                    `;
+                    document.body.appendChild(clearDialog);
+                    clearDialog.querySelector('#clear-apikey-confirm-btn').onclick = async () => {
+                        // 清除API Key
+                        const token = getToken();
+                        // 这段代码通过向后端接口 /api/set_key 发送POST请求，将 api_key 设为空字符串，从而清除用户当前设置的API Key。
+                        // 请求头中包含了Content-Type和用户的Bearer Token用于身份验证。
+                    await fetch('/set_key', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                            body: JSON.stringify({ api_key: '' })
                         });
-                    }
-                };
-                clearDialog.querySelector('#clear-apikey-cancel-btn').onclick = () => {
-                    document.body.removeChild(clearDialog);
-                };
-                clearDialog.addEventListener('click', (e) => {
-                    if (e.target === clearDialog) {
+                        // 关闭API Key清除弹窗
                         document.body.removeChild(clearDialog);
-                    }
-                });
-                return;
-            }
-            if (apiKeyDialog) return;
-            apiKeyDialog = document.createElement('div');
-            apiKeyDialog.style = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.18);z-index:9999;display:flex;align-items:center;justify-content:center;';
-            apiKeyDialog.innerHTML = `
-                <div style="background:#fff;padding:28px 32px 18px 32px;border-radius:12px;box-shadow:0 4px 24px #888;min-width:320px;display:flex;flex-direction:column;align-items:center;">
-                    <input id="deepseek-api-key-input" type="text" placeholder="DeepSeek API Key" style="width:220px;padding:8px 12px;border-radius:5px;border:1px solid #ccc;font-size:15px;margin-bottom:16px;" />
-                    <div style="display:flex;gap:12px;">
-                      <button id="set-deepseek-key-btn" class="login-btn small-btn" type="button">确定</button>
-                      <button id="cancel-apikey-btn" class="register-cancel-btn" type="button">取消</button>
-                    </div>
-                    <div class="agent-message" id="apikey-msg" style="margin-top:10px;padding:4px 8px;border-radius:5px;font-size:13px;display:none;"></div>
-                </div>
-            `;
-            document.body.appendChild(apiKeyDialog);
-            const apiKeyInput = apiKeyDialog.querySelector('#deepseek-api-key-input');
-            const apiKeyMsg = apiKeyDialog.querySelector('#apikey-msg');
-            apiKeyDialog.querySelector('#set-deepseek-key-btn').onclick = async () => {
-                const key = apiKeyInput.value.trim();
-                if (!key) {
-                    apiKeyMsg.textContent = '请输入API Key';
-                    apiKeyMsg.style.background = '#fee2e2';
-                    apiKeyMsg.style.color = '#b91c1c';
-                    apiKeyMsg.style.border = '1px solid #fecaca';
-                    apiKeyMsg.style.display = '';
+                        // 重新获取用户信息，确保前端状态与后端同步
+                        const newUserinfo = await fetchUserInfo(token);
+                        // 根据最新的API Key状态，更新按钮的显示（如禁用/启用、文字变化等）
+                    updateApiKeyButtonState(nodes[1], newUserinfo.api_key);
+                        // 更新本地的用户信息对象，保持数据一致
+                        userinfo.api_key = newUserinfo.api_key;
+                        // 美化弹窗：API Key已清除
+                        if (!document.getElementById('apikey-cleared-dialog')) {
+                            const dialog = document.createElement('div');
+                            dialog.id = 'apikey-cleared-dialog';
+                            dialog.style = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.18);z-index:9999;display:flex;align-items:center;justify-content:center;';
+                            dialog.innerHTML = `
+                                <div style="background:#fff;padding:28px 32px 18px 32px;border-radius:12px;box-shadow:0 4px 24px #888;min-width:320px;display:flex;flex-direction:column;align-items:center;">
+                                    <div style="font-size:16px;color:#15803d;margin-bottom:18px;">API Key已清除</div>
+                                    <button id="apikey-cleared-ok-btn" class="login-btn small-btn" type="button" style="min-width:80px;">确定</button>
+                                </div>
+                            `;
+                            document.body.appendChild(dialog);
+                            dialog.querySelector('#apikey-cleared-ok-btn').onclick = () => {
+                                document.body.removeChild(dialog);
+                            };
+                            dialog.addEventListener('click', (e) => {
+                                if (e.target === dialog) {
+                                    document.body.removeChild(dialog);
+                                }
+                            });
+                        }
+                    };
+                    clearDialog.querySelector('#clear-apikey-cancel-btn').onclick = () => {
+                        document.body.removeChild(clearDialog);
+                    };
+                    clearDialog.addEventListener('click', (e) => {
+                        if (e.target === clearDialog) {
+                            document.body.removeChild(clearDialog);
+                        }
+                    });
                     return;
                 }
-                apiKeyMsg.textContent = '设置中...';
-                apiKeyMsg.style.background = '#e6f0ff';
-                apiKeyMsg.style.color = '#2563eb';
-                apiKeyMsg.style.border = '1px solid #b6d4fe';
-                apiKeyMsg.style.display = '';
-                try {
-                    const token = getToken();
-                    const res = await fetch('/set_key', {
-                        method: 'POST',
-                        // 设置请求头，指定内容类型为JSON，并添加Bearer类型的用户认证token
-                        headers: { 
-                            'Content-Type': 'application/json', // 请求体为JSON格式
-                            'Authorization': 'Bearer ' + token  // 使用Bearer Token进行身份验证
-                        },
-                        body: JSON.stringify({ api_key: key })
-                    });
-                    if (res.ok) {
-                        apiKeyMsg.textContent = 'API已设置';
-                        apiKeyMsg.style.background = '#e6fbe6';
-                        apiKeyMsg.style.color = '#15803d';
-                        apiKeyMsg.style.border = '1px solid #a7f3d0';
-                        // 刷新userinfo和按钮
-                        const newUserinfo = await fetchUserInfo();
-                        updateApiKeyButtonState(newUserinfo.api_key);
-                        userinfo.api_key = newUserinfo.api_key;
-                        setTimeout(() => {
-                            if (apiKeyDialog && document.body.contains(apiKeyDialog)) {
-                                document.body.removeChild(apiKeyDialog);
-                                apiKeyDialog = null;
-                            }
-                        }, 1500);
-                    } else {
-                        apiKeyMsg.textContent = 'API Key设置失败';
+                if (apiKeyDialog) return;
+                apiKeyDialog = document.createElement('div');
+                apiKeyDialog.style = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.18);z-index:9999;display:flex;align-items:center;justify-content:center;';
+                apiKeyDialog.innerHTML = `
+                    <div style="background:#fff;padding:28px 32px 18px 32px;border-radius:12px;box-shadow:0 4px 24px #888;min-width:320px;display:flex;flex-direction:column;align-items:center;">
+                        <input id="deepseek-api-key-input" type="text" placeholder="DeepSeek API Key" style="width:220px;padding:8px 12px;border-radius:5px;border:1px solid #ccc;font-size:15px;margin-bottom:16px;" />
+                        <div style="display:flex;gap:12px;">
+                          <button id="set-deepseek-key-btn" class="login-btn small-btn" type="button">确定</button>
+                          <button id="cancel-apikey-btn" class="register-cancel-btn" type="button">取消</button>
+                        </div>
+                        <div class="agent-message" id="apikey-msg" style="margin-top:10px;padding:4px 8px;border-radius:5px;font-size:13px;display:none;"></div>
+                    </div>
+                `;
+                document.body.appendChild(apiKeyDialog);
+                const apiKeyInput = apiKeyDialog.querySelector('#deepseek-api-key-input');
+                const apiKeyMsg = apiKeyDialog.querySelector('#apikey-msg');
+                apiKeyDialog.querySelector('#set-deepseek-key-btn').onclick = async () => {
+                    const key = apiKeyInput.value.trim();
+                    if (!key) {
+                        apiKeyMsg.textContent = '请输入API Key';
+                        apiKeyMsg.style.background = '#fee2e2';
+                        apiKeyMsg.style.color = '#b91c1c';
+                        apiKeyMsg.style.border = '1px solid #fecaca';
+                        apiKeyMsg.style.display = '';
+                        return;
+                    }
+                    apiKeyMsg.textContent = '设置中...';
+                    apiKeyMsg.style.background = '#e6f0ff';
+                    apiKeyMsg.style.color = '#2563eb';
+                    apiKeyMsg.style.border = '1px solid #b6d4fe';
+                    apiKeyMsg.style.display = '';
+                    try {
+                        const token = getToken();
+                        const res = await fetch('/set_key', {
+                            method: 'POST',
+                            // 设置请求头，指定内容类型为JSON，并添加Bearer类型的用户认证token
+                            headers: { 
+                                'Content-Type': 'application/json', // 请求体为JSON格式
+                                'Authorization': 'Bearer ' + token  // 使用Bearer Token进行身份验证
+                            },
+                            body: JSON.stringify({ api_key: key })
+                        });
+                    // console.log("res:",res)
+                        if (res.ok) {
+                            apiKeyMsg.textContent = 'API已设置';
+                            apiKeyMsg.style.background = '#e6fbe6';
+                            apiKeyMsg.style.color = '#15803d';
+                            apiKeyMsg.style.border = '1px solid #a7f3d0';
+                            // 刷新userinfo和按钮
+                        let newUserinfo = null;
+                        try {
+                            newUserinfo = await fetchUserInfo(token);
+                        } catch (e) {
+                            console.error('获取用户信息失败:', e);
+                            // 可选：在 UI 上提示
+                            apiKeyMsg.textContent = '获取用户信息失败';
+                            apiKeyMsg.style.background = '#fee2e2';
+                            apiKeyMsg.style.color = '#b91c1c';
+                            apiKeyMsg.style.border = '1px solid #fecaca';
+                            return;
+                        }
+                        // console.log("newUserinfo:",newUserinfo)
+                        updateApiKeyButtonState(nodes[1], newUserinfo.api_key);
+                            userinfo.api_key = newUserinfo.api_key;
+                            setTimeout(() => {
+                                if (apiKeyDialog && document.body.contains(apiKeyDialog)) {
+                                    document.body.removeChild(apiKeyDialog);
+                                    apiKeyDialog = null;
+                                }
+                            }, 1500);
+                        } else {
+                            apiKeyMsg.textContent = 'API Key设置失败';
+                            apiKeyMsg.style.background = '#fee2e2';
+                            apiKeyMsg.style.color = '#b91c1c';
+                            apiKeyMsg.style.border = '1px solid #fecaca';
+                        }
+                    } catch (e) {
+                        apiKeyMsg.textContent = '网络错误，请稍后重试';
                         apiKeyMsg.style.background = '#fee2e2';
                         apiKeyMsg.style.color = '#b91c1c';
                         apiKeyMsg.style.border = '1px solid #fecaca';
                     }
-                } catch (e) {
-                    apiKeyMsg.textContent = '网络错误，请稍后重试';
-                    apiKeyMsg.style.background = '#fee2e2';
-                    apiKeyMsg.style.color = '#b91c1c';
-                    apiKeyMsg.style.border = '1px solid #fecaca';
-                }
-            };
-            apiKeyDialog.querySelector('#cancel-apikey-btn').onclick = () => {
-                document.body.removeChild(apiKeyDialog);
-                apiKeyDialog = null;
-            };
-            apiKeyDialog.addEventListener('click', (e) => {
-                if (e.target === apiKeyDialog) {
+                };
+                apiKeyDialog.querySelector('#cancel-apikey-btn').onclick = () => {
                     document.body.removeChild(apiKeyDialog);
                     apiKeyDialog = null;
-                }
-            });
-        };
-    }
+                };
+                apiKeyDialog.addEventListener('click', (e) => {
+                    if (e.target === apiKeyDialog) {
+                        document.body.removeChild(apiKeyDialog);
+                        apiKeyDialog = null;
+                    }
+                });
+            };
+        }
 
     const agentActions = await all_agent_actions(nodes[0])
     //点击其中一个agent的按钮
@@ -532,9 +555,9 @@ async function initializeDashboard(props, nodes) {
     if (token) {
         try {
             isLoggedIn = await validateToken(token);
-            console.log("isLoggedIn:",isLoggedIn)
+            console.log("isLoggedIn:", isLoggedIn)
             if (!isLoggedIn) {
-                localStorage.removeItem('token');
+                    localStorage.removeItem('token');
             }
         } catch (e) {
             console.error('Token validation error:', e);
@@ -554,7 +577,7 @@ async function initializeDashboard(props, nodes) {
         apiKeyBtnHtml = `<button class="login-btn small-btn" id="show-apikey-btn" type="button" style="margin-left:18px;">设置API Key</button>`;
     }
     renderDashboardAuthbar(nodes[1], apiKeyBtnHtml, isLoggedIn, props);
-    
+
     // 这里定义了主内容区域的HTML结构
     // mainContentHtml 包含一个水平居中的容器（dashboard-horizontal-wrapper），
     // 该容器使用flex布局，使内容在页面中垂直和水平居中，且高度为70%的视口高度
@@ -568,7 +591,7 @@ async function initializeDashboard(props, nodes) {
         </main>
     `;
     nodes[0].innerHTML = `${mainContentHtml}`;
-    
+
     // 为历史按钮单独创建语义化容器
     if (isLoggedIn) {
         // 左上角历史按钮及结果区容器
@@ -588,9 +611,9 @@ async function initializeDashboard(props, nodes) {
     // 我们将历史按钮的容器（historyContainer）添加到页面的 <body> 元素中，
     // 这样用户就能在页面上看到这个历史按钮了。
     document.body.appendChild(frag);
-    
+
     // 渲染dashboard-content-row内容，并在渲染后绑定事件
-    setTimeout(() => {
+                setTimeout(() => {
         // 元素类别前加.是因为这是CSS选择器语法，.表示“类选择器”，用于选中具有特定class的元素
         const row = document.querySelector('.dashboard-content-row');
         if (row) {
@@ -601,7 +624,6 @@ async function initializeDashboard(props, nodes) {
                     <button class="dashboard-action" data-action="doc">文档生成Agent</button>
                     <button class="dashboard-action" data-action="reviewer">代码审查Agent</button>
                     <button class="dashboard-action" data-action="finalizer">代码整合Agent</button>
-                    <button class="dashboard-action" data-action="test">测试生成Agent</button>
                     <button class="dashboard-action" data-action="agent_workflow">Agent Workflow</button>
                 </nav>
                 <aside id="agent-form-area" style="flex:0 0 380px;max-width:420px;min-height:200px;"></aside>
@@ -612,7 +634,7 @@ async function initializeDashboard(props, nodes) {
         if (isLoggedIn) {
             const btn = document.querySelector('#show-history-btn');
             if (btn) {
-                btn.onclick = function() {
+                btn.onclick = function () {
                     window.location.href = 'history.html';
                 };
             }
@@ -636,7 +658,7 @@ export function renderDashboard(props = {}) {
     const left_top_header = document.createElement('header')
     left_top_header.className = 'history_info'
     nodes.push(left_top_header)
-    
+
     // 开始初始化
     console.log('Starting dashboard initialization...');
     initializeDashboard(props, nodes).catch(error => {

@@ -27,6 +27,34 @@ services:
     networks:  
       - db-network  
 
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      - DATABASE_URL=postgresql://admin:ashing-great@postgres:5432/multiagent
+    depends_on:
+      - postgres
+    networks:
+      - db-network
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    depends_on:
+      - backend
+    networks:
+      - db-network
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend:/app  # 将宿主机的 frontend 目录挂载到容器内的 /app 目录，实现前端代码的热更新和持久化
+
 networks:  
   db-network:  
     driver: bridge  

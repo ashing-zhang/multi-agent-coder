@@ -19,7 +19,7 @@ async def coder_stream(
 ):
     """流式代码生成API，返回内容并存入数据库（sessions和messages表）"""
     data = await request.json()
-    task = data.get("requirement", "")
+    task = data.get("description", "")
     
     # 用当前用户的api_key创建model_client
     client = set_deepseek_api_key(current_user.api_key)

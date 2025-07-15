@@ -20,7 +20,7 @@ async def doc_stream(
 ):
     """流式文档生成API，返回内容并存入数据库（sessions和messages表）"""
     data = await request.json()
-    code = data.get("requirement", "")
+    code = data.get("description", "")
     
     # 用当前用户的api_key创建model_client
     client = set_deepseek_api_key(current_user.api_key)

@@ -6,7 +6,7 @@ export const agentFormConfig = {
     requirement: {
         title: '生成任务的需求文档',
         fields: [
-            { label: '输入', name: 'requirement', type: 'textarea', placeholder: '请输入你想完成的编码任务(任务描述可附件上传)', required: true },
+            { label: '输入', name: 'requirement', type: 'textarea', placeholder: '请输入你想完成的编码任务(任务描述可附件上传)', required: false },
             { label: '附件', name: 'file', type: 'file', accept: '.txt,.md,.pdf,.doc,.docx,.zip,.rar,.7z,.py,.js,.java,.cpp,.c,.json,.csv', required: false }
         ]
     },

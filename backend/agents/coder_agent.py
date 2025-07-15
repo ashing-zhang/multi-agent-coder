@@ -12,7 +12,8 @@ class CoderAgent:
     def __init__(self,model_client):
         self.agent = AssistantAgent(
             name="CoderAgent",
-            system_message="你是一个代码生成专家，根据用户需求编写高质量的 Python 代码。",
+            system_message="你是一个代码生成专家，根据用户需求编写高质量的 Python 代码，\
+                要求答案以可直接执行的python格式给出（文字部分通过注释形式回答）。",
             model_client=model_client,
             model_client_stream=True
         )

@@ -25,7 +25,7 @@ class WorkflowResponse(BaseModel):
     doc: str
     test_code: str
 
-@router.post("/workflow/stream")
+@router.post("/stream")
 async def workflow_stream(
     request: Request, 
     current_user: UserModel = Depends(get_current_user),
@@ -33,7 +33,7 @@ async def workflow_stream(
 ):
     """流式Agent Workflow API，返回内容并存入数据库（sessions和messages表）"""
     data = await request.json()
-    requirement = data.get("requirement", "")
+    requirement = data.get("description", "")
     
     # 用当前用户的api_key创建model_client
     client = set_deepseek_api_key(current_user.api_key)

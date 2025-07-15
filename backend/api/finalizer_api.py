@@ -19,7 +19,7 @@ async def finalizer_stream(
 ):
     """流式代码整合API，返回内容并存入数据库（sessions和messages表）"""
     data = await request.json()
-    code = data.get("requirement", "")
+    code = data.get("description", "")
     suggestions = data.get("suggestions", "")
     
     # 用当前用户的api_key创建model_client

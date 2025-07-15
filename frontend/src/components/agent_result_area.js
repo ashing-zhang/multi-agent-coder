@@ -29,7 +29,7 @@ function showAgentMessage(container, message, style = {}) {
 
 // 实时渲染流式内容
 function renderStreamingResult(resultDiv, content) {
-    resultDiv.innerHTML = `<pre style='white-space:pre-wrap;word-break:break-all;margin:8px 0 0 0;'>${content}</pre>`;
+    resultDiv.innerHTML = `<pre style='white-space:pre-wrap;word-break:break-all;margin:8px 0 0 0;max-height:400px;overflow:auto;'>${content}</pre>`;
 }
 
 // 保存按钮
@@ -57,7 +57,8 @@ function showSaveButton(result, type, agentType, resultArea) {
             URL.revokeObjectURL(link.href);
         }, 100);
     };
-    resultArea.appendChild(saveBtn);
+    // 插入到 resultArea 的最前面
+    resultArea.insertBefore(saveBtn, resultArea.firstChild);
 }
 
 // ========== 各 Agent 的 onSubmit 处理函数 ========== //
@@ -113,37 +114,42 @@ async function onSubmitAgentGeneric({
 }) {
     // 获取需求文本
     const requirement = form.requirement.value.trim();
-    if (!requirement) return;
-    const area = resultArea;
-
     // 检查是否有文件输入
     const fileInput = form.querySelector('input[type="file"]');
-    let fileContent = null;
+    let fileContents = [];
     if (fileInput && fileInput.files && fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        // 只处理文本文件（如需二进制可扩展）
-        try {
-            fileContent = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsText(file);
-            });
-        } catch (e) {
-            showAgentMessage(area, '文件读取失败，请重试', {
-                background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca'
-            });
-            return;
+        const files = Array.from(fileInput.files);
+        for (const file of files) {
+            try {
+                const content = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsText(file);
+                });
+                fileContents.push(`\n\n===== 文件: ${file.name} =====\n${content}`);
+            } catch (e) {
+                showAgentMessage(area, `文件 ${file.name} 读取失败，请重试`, {
+                    background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca'
+                });
+                return;
+            }
         }
     }
+    // 合并 requirement 和所有文件内容
+    let mergedRequirement = requirement;
+    if (fileContents.length > 0) {
+        mergedRequirement = requirement ? (requirement + fileContents.join('')) : fileContents.join('');
+    }
+    console.log("mergedRequirement:", mergedRequirement)
 
     // 显示处理中消息，使用传入参数
-    const msgDiv = showAgentMessage(area, msgText, {
+    const msgDiv = showAgentMessage(resultArea, msgText, {
         background: msgTextBg, color: msgTextColor, border: msgTextBorder
     });
 
     // 创建结果区域，使用传入参数
-    const resultDiv = createResultArea(area, resultDivClass, resultDivTitle);
+    const resultDiv = createResultArea(resultArea, resultDivClass, resultDivTitle);
 
     try {
         let result = '';
@@ -151,13 +157,9 @@ async function onSubmitAgentGeneric({
 
         // 构造请求体，优先用 buildRequestBody，否则默认 { description: requirement }
         let requestBody = buildRequestBody
-            ? buildRequestBody(requirement)
-            : { description: requirement };
-        // 如果有文件内容，合并到请求体
-        if (fileContent !== null) {
-            requestBody.fileContent = fileContent;
-            // 你也可以根据后端需要，合并到 description 或单独字段
-        }
+            ? buildRequestBody(mergedRequirement)
+            : { description: mergedRequirement };
+        // 不再单独赋值 fileContent
 
         // 三元表达式​：仅当 token 存在时添加 Authorization 头，避免无效字段
         // await：暂停当前 async 函数执行，等待 fetch 返回的 Promise 完成（不阻塞主线程）
@@ -189,13 +191,13 @@ async function onSubmitAgentGeneric({
 
         // 显示保存按钮，使用传入参数
         try {
-            showSaveButton(result, saveExt, saveName, area);
+            showSaveButton(result, saveExt, saveName, resultArea);
         } catch (e) {
             console.error('showSaveButton 执行出错:', e);
         }
     } catch (e) {
         // 错误提示，使用传入参数
-        showAgentMessage(area, msgTextError, {
+        showAgentMessage(resultArea, msgTextError, {
             background: msgTextErrorBg,
             color: msgTextErrorColor,
             border: msgTextErrorBorder
@@ -230,7 +232,7 @@ export async function onSubmitAgentWorkflow(form, resultArea) {
         streamUrl: '/workflow/stream',
         resultDivClass: 'workflow-result',
         resultDivTitle: 'Agent Workflow 执行结果：',
-        saveExt: 'py',
+        saveExt: 'md',
         saveName: 'agent_workflow',
         requireApiKey: true,
         msgText: 'Workflow执行中...',
@@ -262,7 +264,7 @@ export async function onSubmitCoder(form, resultArea) {
         streamUrl: '/agent/coder/stream',
         resultDivClass: 'coder-result',
         resultDivTitle: '代码生成结果：',
-        saveExt: 'py',
+        saveExt: 'md',
         saveName: 'coder',
         requireApiKey: true,
         msgText: '生成中...',
@@ -278,7 +280,7 @@ export async function onSubmitReviewer(form, resultArea) {
         streamUrl: '/agent/reviewer/stream',
         resultDivClass: 'reviewer-result',
         resultDivTitle: '代码审查结果：',
-        saveExt: 'txt',
+        saveExt: 'md',
         saveName: 'reviewer',
         requireApiKey: true,
         msgText: '审查中...',
@@ -294,7 +296,7 @@ export async function onSubmitFinalizer(form, resultArea) {
         streamUrl: '/agent/finalizer/stream',
         resultDivClass: 'finalizer-result',
         resultDivTitle: '代码整合结果：',
-        saveExt: 'py',
+        saveExt: 'md',
         saveName: 'finalizer',
         requireApiKey: true,
         msgText: '整合中...',
@@ -310,7 +312,7 @@ export async function onSubmitTest(form, resultArea) {
         streamUrl: '/agent/test/stream',
         resultDivClass: 'test-result',
         resultDivTitle: '测试生成结果：',
-        saveExt: 'py',
+        saveExt: 'md',
         saveName: 'test',
         requireApiKey: true,
         msgText: '生成中...',
