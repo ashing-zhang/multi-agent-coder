@@ -116,6 +116,27 @@ async function onSubmitAgentGeneric({
     if (!requirement) return;
     const area = resultArea;
 
+    // 检查是否有文件输入
+    const fileInput = form.querySelector('input[type="file"]');
+    let fileContent = null;
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        // 只处理文本文件（如需二进制可扩展）
+        try {
+            fileContent = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsText(file);
+            });
+        } catch (e) {
+            showAgentMessage(area, '文件读取失败，请重试', {
+                background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca'
+            });
+            return;
+        }
+    }
+
     // 显示处理中消息，使用传入参数
     const msgDiv = showAgentMessage(area, msgText, {
         background: msgTextBg, color: msgTextColor, border: msgTextBorder
@@ -129,9 +150,14 @@ async function onSubmitAgentGeneric({
         const token = localStorage.getItem('token');
 
         // 构造请求体，优先用 buildRequestBody，否则默认 { description: requirement }
-        const requestBody = buildRequestBody
+        let requestBody = buildRequestBody
             ? buildRequestBody(requirement)
             : { description: requirement };
+        // 如果有文件内容，合并到请求体
+        if (fileContent !== null) {
+            requestBody.fileContent = fileContent;
+            // 你也可以根据后端需要，合并到 description 或单独字段
+        }
 
         // 三元表达式​：仅当 token 存在时添加 Authorization 头，避免无效字段
         // await：暂停当前 async 函数执行，等待 fetch 返回的 Promise 完成（不阻塞主线程）
