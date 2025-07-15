@@ -47,7 +47,7 @@ async function renderDashboardAuthbar(authbar, apiKeyBtnHtml, isLoggedIn, props 
 
 // 通用表单渲染，支持file类型
 // onSubmit 是一个回调函数，当表单提交时会被调用，通常用于处理表单数据的生成、请求等逻辑
-async function showAgentForm(type, onSubmit) {
+async function showAgentForm(container, type, onSubmit) {
     console.log("showAgentForm entered")
     const config = agentFormConfig[type] || agentFormConfig['agent_workflow'];
     const formArea = container.querySelector('#agent-form-area');
@@ -264,61 +264,49 @@ async function warning(message, type = 'warning') {
     okBtn.focus();
 }
 
-async function all_agent_actions() {
-    // agent onSubmit 分发映射
-    // 共享参数 userinfo​：所有函数调用时均传入 userinfo（用户信息对象）
-    const agentOnSubmits = {
-        requirement: (form, resultArea) => onSubmitRequirement(form, resultArea, userinfo),
-        agent_workflow: (form, resultArea) => onSubmitAgentWorkflow(form, resultArea, userinfo),
-        doc: (form, resultArea) => onSubmitDoc(form, resultArea, userinfo),
-        coder: (form, resultArea) => onSubmitCoder(form, resultArea, userinfo),
-        reviewer: (form, resultArea) => onSubmitReviewer(form, resultArea, userinfo),
-        finalizer: (form, resultArea) => onSubmitFinalizer(form, resultArea, userinfo),
-        test: (form, resultArea) => onSubmitTest(form, resultArea, userinfo)
-    };
-
+async function all_agent_actions(container) {
     const agentActions = {
         requirement: async () => {
             if (!(await checkLoginValid())) {
                 return;
             }
-            await showAgentForm('requirement', agentOnSubmits['requirement']);
+            await showAgentForm(container, 'requirement', (form, resultArea) => onSubmitRequirement(form, resultArea));
         },
         agent_workflow: async () => {
             if (!(await checkLoginValid())) {
                 return;
             }
-            await showAgentForm('agent_workflow', agentOnSubmits['agent_workflow']);
+            await showAgentForm(container, 'agent_workflow', (form, resultArea) => onSubmitAgentWorkflow(form, resultArea));
         },
         doc: async () => {
             if (!(await checkLoginValid())) {
                 return;
             }
-            await showAgentForm('doc', agentOnSubmits['doc']);
+            await showAgentForm(container, 'doc', (form, resultArea) => onSubmitDoc(form, resultArea));
         },
         coder: async () => {
             if (!(await checkLoginValid())) {
                 return;
             }
-            await showAgentForm('coder', agentOnSubmits['coder']);
+            await showAgentForm(container, 'coder', (form, resultArea) => onSubmitCoder(form, resultArea));
         },
         reviewer: async () => {
             if (!(await checkLoginValid())) {
                 return;
             }
-            await showAgentForm('reviewer', agentOnSubmits['reviewer']);
+            await showAgentForm(container, 'reviewer', (form, resultArea) => onSubmitReviewer(form, resultArea));
         },
         finalizer: async () => {
             if (!(await checkLoginValid())) {
                 return;
             }
-            await showAgentForm('finalizer', agentOnSubmits['finalizer']);
+            await showAgentForm(container, 'finalizer', (form, resultArea) => onSubmitFinalizer(form, resultArea));
         },
         test: async () => {
             if (!(await checkLoginValid())) {
                 return;
             }
-            await showAgentForm('test', agentOnSubmits['test']);
+            await showAgentForm(container, 'test', (form, resultArea) => onSubmitTest(form, resultArea));
         }
     };
 
@@ -519,7 +507,7 @@ async function initializeDashboardFeatures(nodes, userinfo, logout_func) {
         };
     }
 
-    const agentActions = await all_agent_actions()
+    const agentActions = await all_agent_actions(nodes[0])
     //点击其中一个agent的按钮
     await agent_event(nodes[0], agentActions)
 

@@ -33,8 +33,7 @@ function renderStreamingResult(resultDiv, content) {
 }
 
 // 保存按钮
-function showSaveButton(result, type, agentType, container) {
-    const resultArea = container.querySelector('#agent-result-area');
+function showSaveButton(result, type, agentType, resultArea) {
     let saveBtn = resultArea.querySelector('.agent-save-btn');
     if (saveBtn) saveBtn.remove();
     saveBtn = document.createElement('button');
@@ -92,7 +91,6 @@ function showSaveButton(result, type, agentType, container) {
 async function onSubmitAgentGeneric({
     form,
     resultArea,
-    userinfo,
     streamUrl,
     resultDivClass,
     resultDivTitle,
@@ -164,7 +162,11 @@ async function onSubmitAgentGeneric({
         msgDiv.style.border = msgTextDoneBorder;
 
         // 显示保存按钮，使用传入参数
-        showSaveButton(result, saveExt, saveName, area);
+        try {
+            showSaveButton(result, saveExt, saveName, area);
+        } catch (e) {
+            console.error('showSaveButton 执行出错:', e);
+        }
     } catch (e) {
         // 错误提示，使用传入参数
         showAgentMessage(area, msgTextError, {
@@ -178,11 +180,10 @@ async function onSubmitAgentGeneric({
 // export function 必须在模块最外层作用域，​不可嵌套在代码块（如 if 或函数内）
 // ({ description: requirement })：返回一个 ​JavaScript 对象，包含一个 description 属性，其值为传入的 requirement 参数。
 // 外层括号 ( ) 是为了避免箭头函数将 { } 解析为代码块而非对象
-export async function onSubmitRequirement(form, resultArea, userinfo) {
+export async function onSubmitRequirement(form, resultArea) {
     return onSubmitAgentGeneric({
         form,
         resultArea,
-        userinfo,
         streamUrl: '/agent/requirement/stream',
         resultDivClass: 'requirement-analysis',
         resultDivTitle: '需求分析结果：',
@@ -196,11 +197,10 @@ export async function onSubmitRequirement(form, resultArea, userinfo) {
     });
 }
 
-export async function onSubmitAgentWorkflow(form, resultArea, userinfo) {
+export async function onSubmitAgentWorkflow(form, resultArea) {
     return onSubmitAgentGeneric({
         form,
         resultArea,
-        userinfo,
         streamUrl: '/workflow/stream',
         resultDivClass: 'workflow-result',
         resultDivTitle: 'Agent Workflow 执行结果：',
@@ -213,11 +213,10 @@ export async function onSubmitAgentWorkflow(form, resultArea, userinfo) {
     });
 }
 
-export async function onSubmitDoc(form, resultArea, userinfo) {
+export async function onSubmitDoc(form, resultArea) {
     return onSubmitAgentGeneric({
         form,
         resultArea,
-        userinfo,
         streamUrl: '/agent/doc/stream',
         resultDivClass: 'doc-result',
         resultDivTitle: '文档生成结果：',
@@ -230,11 +229,10 @@ export async function onSubmitDoc(form, resultArea, userinfo) {
     });
 }
 
-export async function onSubmitCoder(form, resultArea, userinfo) {
+export async function onSubmitCoder(form, resultArea) {
     return onSubmitAgentGeneric({
         form,
         resultArea,
-        userinfo,
         streamUrl: '/agent/coder/stream',
         resultDivClass: 'coder-result',
         resultDivTitle: '代码生成结果：',
@@ -247,11 +245,10 @@ export async function onSubmitCoder(form, resultArea, userinfo) {
     });
 }
 
-export async function onSubmitReviewer(form, resultArea, userinfo) {
+export async function onSubmitReviewer(form, resultArea) {
     return onSubmitAgentGeneric({
         form,
         resultArea,
-        userinfo,
         streamUrl: '/agent/reviewer/stream',
         resultDivClass: 'reviewer-result',
         resultDivTitle: '代码审查结果：',
@@ -264,11 +261,10 @@ export async function onSubmitReviewer(form, resultArea, userinfo) {
     });
 }
 
-export async function onSubmitFinalizer(form, resultArea, userinfo) {
+export async function onSubmitFinalizer(form, resultArea) {
     return onSubmitAgentGeneric({
         form,
         resultArea,
-        userinfo,
         streamUrl: '/agent/finalizer/stream',
         resultDivClass: 'finalizer-result',
         resultDivTitle: '代码整合结果：',
@@ -281,11 +277,10 @@ export async function onSubmitFinalizer(form, resultArea, userinfo) {
     });
 }
 
-export async function onSubmitTest(form, resultArea, userinfo) {
+export async function onSubmitTest(form, resultArea) {
     return onSubmitAgentGeneric({
         form,
         resultArea,
-        userinfo,
         streamUrl: '/agent/test/stream',
         resultDivClass: 'test-result',
         resultDivTitle: '测试生成结果：',

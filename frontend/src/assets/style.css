@@ -353,6 +353,18 @@ body {
   }
 }
 
+.user_status {
+  position: fixed;
+  top: 24px;
+  right: 32px;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: transparent;
+  box-shadow: none;
+}
+
 .login-status {
   display: inline-flex;
   align-items: center;
