@@ -1,0 +1,11 @@
+uvicorn
+fastapi
+sqlalchemy
+dotenv
+psycopg2-binary
+PyJWT
+python-multipart
+pyautogen
+autogen-ext
+openai
+tiktoken

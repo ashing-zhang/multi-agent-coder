@@ -1,0 +1,13 @@
+{
+  "name": "frontend",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'No build step needed for vanilla JS.'",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
