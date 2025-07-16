@@ -33,6 +33,7 @@ sh launch_server.sh
 直接访问 [http://127.0.0.1:8000](http://127.0.0.1:8000) 即可体验前端页面与全部功能。
 
 ### 4. 生产环境
+- 先将.env环境变量文件中的ENV赋值为pro
 - 通过以下命令启动pg数据库容器、pgadmin容器、backend容器和frontend容器
 ```bash
 sh launch_docker.sh

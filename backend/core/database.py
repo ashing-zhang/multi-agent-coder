@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from fastapi.security import OAuth2PasswordBearer
 
 # 自动加载.env文件（当前工作目录）
-load_dotenv('.env')
+load_dotenv('backend/.env')
 
 POSTGRES_USER = os.getenv("POSTGRES_USER", "admin")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "ashing-great")
