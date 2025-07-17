@@ -63,7 +63,6 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     if not user or user.password != form_data.password:
         raise HTTPException(status_code=400, detail="用户名或密码错误")
     access_token = create_access_token(data={"sub": user.username})
-    # print('access_token:',access_token)
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.get("/userinfo", response_model=UserOut)
