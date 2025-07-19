@@ -13,7 +13,9 @@ function renderLogin(onLogin) {
         e.preventDefault();
         const username = form.username.value;
         const password = form.password.value;
-        // 调用后端API
+        
+        // 发送POST请求到后端的 /auth/token 接口，提交用户名和密码以获取token
+        // 使用 application/x-www-form-urlencoded 格式编码请求体
         const res = await fetch('/auth/token', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
