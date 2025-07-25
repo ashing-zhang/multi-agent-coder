@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from ..models.session import Session as Session_History
 from ..models.message import Message
 from ..agents.test_agent import TestAgent
@@ -16,7 +16,7 @@ router = APIRouter()
 async def test_stream(
     request: Request,
     current_user: UserModel = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """流式测试生成API，返回内容并存入数据库（sessions和messages表）"""
     data = await request.json()
@@ -32,8 +32,8 @@ async def test_stream(
         session_name=f"测试生成: {code[:30]}"  # 取前30字符作为会话名
     )
     db.add(new_session)
-    db.commit()
-    db.refresh(new_session)
+    await db.commit()
+    await db.refresh(new_session)
     session_id = new_session.session_id
 
     # 2. 创建用户问题的Message记录
@@ -43,8 +43,8 @@ async def test_stream(
         role="user"
     )
     db.add(user_message)
-    db.commit()
-    db.refresh(user_message)
+    await db.commit()
+    await db.refresh(user_message)
 
     # 3. 生成AI回答并流式返回，同时收集完整回答
     async def event_stream():
@@ -60,6 +60,6 @@ async def test_stream(
             role="assistant"
         )
         db.add(assistant_message)
-        db.commit()
+        await db.commit()
 
-    return StreamingResponse(event_stream(), media_type="text/plain") 
+    return StreamingResponse(event_stream(), media_type="text/plain")

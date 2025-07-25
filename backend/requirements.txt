@@ -2,7 +2,7 @@ uvicorn
 fastapi
 sqlalchemy
 dotenv
-psycopg2-binary
+asyncpg
 PyJWT
 python-multipart
 pyautogen

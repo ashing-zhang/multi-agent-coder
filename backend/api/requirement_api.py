@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from backend.models.user import User
 from pydantic import BaseModel
 from backend.agents.requirement_agent import RequirementAgent
@@ -17,7 +17,6 @@ from backend.models.user import User as UserModel
 from backend.core.database import get_db
 from backend.agents.requirement_agent import RequirementAgent
 from backend.agents.set_key import set_deepseek_api_key
-from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -26,7 +25,7 @@ router = APIRouter()
 async def requirement_stream(
     request: Request,
     current_user: UserModel = Depends(get_current_user),
-    db: Session = Depends(get_db)
+  db: AsyncSession = Depends(get_db)
 ):
     """流式需求分析API，返回内容并存入数据库（sessions和messages表）"""
     data = await request.json()
@@ -41,8 +40,8 @@ async def requirement_stream(
         session_name=requirement[:30]  # 取前30字符作为会话名，可根据实际需求调整
     )
     db.add(new_session)
-    db.commit()
-    db.refresh(new_session)
+    await db.commit()
+    await db.refresh(new_session)
     session_id = new_session.session_id  # 立即取出
 
     # 2. 创建用户问题的Message记录
@@ -52,9 +51,9 @@ async def requirement_stream(
         role="user"
     )
     db.add(user_message)
-    db.commit()
+    await db.commit()
     # 刷新user_message对象以获取数据库自动生成的字段（如id、created_at等）
-    db.refresh(user_message)
+    await db.refresh(user_message)
 
     # 3. 生成AI回答并流式返回，同时收集完整回答
     async def event_stream():
@@ -70,7 +69,7 @@ async def requirement_stream(
             role="assistant"
         )
         db.add(assistant_message)
-        db.commit()
+        await db.commit()
 
     return StreamingResponse(event_stream(), media_type="text/plain")
 

@@ -32,7 +32,7 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     environment:
-      - DATABASE_URL=postgresql://admin:ashing-great@postgres:5432/multiagent
+      - DATABASE_URL=postgresql+asyncpg://admin:ashing-great@postgres:5432/multiagent
     depends_on:
       - postgres
     networks:
@@ -51,10 +51,10 @@ services:
     networks:
       - db-network
     ports:
-      - "80:80"
+      - "8080:80"  # 将宿主机的 8080 端口映射到容器内的 80 端口
     # volumes:
     #   - ./frontend:/app  # 将宿主机的 frontend 目录挂载到容器内的 /app 目录，实现前端代码的热更新和持久化
 
 networks:  
   db-network:  
-    driver: bridge  
+    driver: bridge
