@@ -25,7 +25,7 @@ router = APIRouter()
 async def requirement_stream(
     request: Request,
     current_user: UserModel = Depends(get_current_user),
-  db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """流式需求分析API，返回内容并存入数据库（sessions和messages表）"""
     data = await request.json()
