@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 """
-MCP Bridge - RESTful Proxy for Model Context Protocol Servers
-A lightweight, LLM-agnostic proxy that connects to multiple MCP servers
-and exposes their capabilities through a unified REST API.
+MCP Bridge - Core Logic Implementation
+This file contains the core logic for MCP server management, configuration loading,
+process handling, and request processing - separated from the API interface.
 """
 
 import os
@@ -13,9 +13,6 @@ import subprocess
 import asyncio
 import signal
 from datetime import datetime, timedelta
-from fastapi import FastAPI, HTTPException, BackgroundTasks
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from typing import Dict, List, Optional, Any
 import logging
 import shutil
@@ -39,52 +36,19 @@ RISK_LEVEL_DESCRIPTION = {
     RISK_LEVEL["HIGH"]: "High risk - Docker execution required"
 }
 
-# Initialize FastAPI application
-app = FastAPI(title="MCP Bridge API", version="1.0.0")
-
-# Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # Server state management
 server_processes: Dict[str, Dict] = {}
 pending_confirmations: Dict[str, Dict] = {}
 server_initialization_state: Dict[str, str] = {}
 
-# Pydantic models for request/response
-base_model_config = {
-    "json_schema_extra": {
-        "examples": [
-            {
-                "id": "context7",
-                "command": "npx",
-                "args": ["-y", "@modelcontextprotocol/server-filesystem"]
-            }
-        ]
-    }
+# Export constants and types for API module
+export = {
+    'RISK_LEVEL': RISK_LEVEL,
+    'RISK_LEVEL_DESCRIPTION': RISK_LEVEL_DESCRIPTION,
+    'server_processes': server_processes,
+    'pending_confirmations': pending_confirmations,
+    'server_initialization_state': server_initialization_state
 }
-
-class ServerConfig(BaseModel):
-    id: str
-    command: str
-    args: List[str] = []
-    env: Optional[Dict[str, str]] = None
-    risk_level: Optional[int] = None
-    docker: Optional[Dict[str, Any]] = None
-
-    class Config(base_model_config):
-        pass
-
-class ToolCallRequest(BaseModel):
-    arguments: Dict[str, Any]
-
-class ConfirmationRequest(BaseModel):
-    confirm: bool
 
 # Helper function to load server configuration from file or environment
 def load_server_config():
@@ -733,7 +697,3 @@ async def get_server_prompt(server_id: str, prompt_name: str, request_data: Dict
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("__main__:app", host="0.0.0.0", port=3000, reload=True)
