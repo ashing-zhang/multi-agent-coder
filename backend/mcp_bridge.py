@@ -437,6 +437,9 @@ async def shutdown_server(server_id: str):
     logger.info(f"Server {server_id} shutdown complete")
 
 # MCP request handler
+# 该函数用于向指定的 MCP 服务器发送请求，支持风险等级检查、确认机制，
+# 并处理服务器响应，返回处理后的结果。可处理标准请求、中等风险需确认的请求，
+# 以及高风险在 Docker 环境中执行的请求。
 async def send_mcp_request(server_id: str, method: str, params: Dict[str, Any] = {}, confirmation_id: Optional[str] = None):
     if server_id not in server_processes:
         raise Exception(f"Server '{server_id}' not found or not connected")
@@ -506,6 +509,9 @@ async def send_mcp_request(server_id: str, method: str, params: Dict[str, Any] =
         if process.stdout.closed:
             break
 
+        # 使用 asyncio.to_thread 异步调用 process.stdout.readline() 方法，
+        # 从子进程的标准输出中读取一行内容。此操作会阻塞直到读取到一行内容或流关闭，
+        # 为了避免阻塞异步事件循环，使用 to_thread 方法将其放到单独的线程中执行。
         line = await asyncio.to_thread(process.stdout.readline)
         if not line:
             await asyncio.sleep(0.1)
