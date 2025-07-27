@@ -62,13 +62,13 @@ class AgentWorkflow:
         # 创建群聊环境
         self.agents: List[AssistantAgent] = [
             self.requirement_agent, self.coder_agent, 
-            self.reviewer_agent, self.finalizer_agent, self.doc_agent, self.test_agent
+            self.reviewer_agent, self.finalizer_agent, self.doc_agent
         ]
         self.group_chat = GroupChat(
             agents=self.agents,
             messages=[],
             max_round=20,
-            speaker_selection_method="round_robin",  # 轮流向每个Agent提问
+            speaker_selection_method="auto",  # 让LLM根据Agent描述和上下文选择最合适的发言人
             allow_repeat_speaker=False
         )
         self.manager = GroupChatManager(groupchat=self.group_chat, model_client=model_client)
