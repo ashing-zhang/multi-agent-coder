@@ -29,4 +29,8 @@ if env == 'dev':
 else:
     frontend_path = 'frontend_dist'
 print('frontend_path:',frontend_path)
+# 将前端静态文件挂载到根路径 "/" 下。
+# 使用 `StaticFiles` 类指定静态文件的目录为 `frontend_path`，该路径根据环境变量 ENV 动态确定。
+# `html=True` 表示当访问目录时默认返回 index.html 文件，常用于单页应用（SPA）。
+# `name="frontend"` 为该挂载点指定一个名称，方便后续引用。
 app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")

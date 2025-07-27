@@ -1,5 +1,7 @@
 from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
 from autogen import GroupChat, GroupChatManager
+# 框架的mcp模块完成了JSON RPC的功能，使用户不用关心JSON RPC的细节，只需要关注业务逻辑。
+from autogen_ext.tools.mcp import StdioServerParams, mcp_server_tools
 from .test_agent import TestAgent
 from typing import AsyncGenerator, List
 import asyncio
@@ -11,37 +13,41 @@ class AgentWorkflow:
     def __init__(self, model_client):
         # 配置LLM模型参数
         self.model_client = model_client
-        llm_config = {
-            "model": model_client.model,
-            "api_key": model_client.api_key,
-            "temperature": 0.7
-        }
-
+        server_params = StdioServerParams(
+            command='npx',
+            args=['-y','@upstash/context7-mcp']
+        )
+        tools = mcp_server_tools(server_params)
         # 创建专业Agent
         self.requirement_agent = AssistantAgent(
             name="requirement_agent",
             system_message="你是需求分析专家，负责将用户需求拆解为清晰的开发任务。",
-            llm_config=llm_config
+            model_client=model_client,
+            tools=tools
         )
         self.coder_agent = AssistantAgent(
             name="coder_agent",
             system_message="你是资深程序员，负责根据需求编写高质量代码。",
-            llm_config=llm_config
+            model_client=model_client,
+            tools=tools
         )
         self.reviewer_agent = AssistantAgent(
             name="reviewer_agent",
             system_message="你是代码审查专家，负责找出代码中的问题并提出改进建议。",
-            llm_config=llm_config
+            model_client=model_client,
+            tools=tools
         )
         self.finalizer_agent = AssistantAgent(
             name="finalizer_agent",
             system_message="你是代码整合专家，负责根据审查建议优化代码。",
-            llm_config=llm_config
+            model_client=model_client,
+            tools=tools
         )
         self.doc_agent = AssistantAgent(
             name="doc_agent",
             system_message="你是文档专家，负责为最终代码生成清晰的使用文档。",
-            llm_config=llm_config
+            model_client=model_client,
+            tools=tools
         )
         
         # 创建用户代理（支持人工介入）
@@ -65,7 +71,7 @@ class AgentWorkflow:
             speaker_selection_method="round_robin",  # 轮流向每个Agent提问
             allow_repeat_speaker=False
         )
-        self.manager = GroupChatManager(groupchat=self.group_chat, llm_config=llm_config)
+        self.manager = GroupChatManager(groupchat=self.group_chat, model_client=model_client)
 
     async def run(self, user_requirement: str) -> dict:
         """
