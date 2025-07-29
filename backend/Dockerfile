@@ -5,6 +5,13 @@ WORKDIR /app
 # 保证安装系统安全补丁
 RUN apt-get update && apt-get upgrade -y && apt-get clean
 
+# 安装 Node.js 和 npm
+RUN apt-get update && \
+    apt-get install -y curl && \
+    curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
+    apt-get install -y nodejs && \
+    apt-get clean
+
 COPY backend/requirements.txt ./requirements.txt
 
 # 安装 requirements.txt 文件中列出的所有 Python 依赖包，并且不使用 pip 的缓存以减少镜像体积

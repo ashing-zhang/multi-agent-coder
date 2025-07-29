@@ -1,3 +1,4 @@
+clear
 # 检查并拉取 python:3.10-slim 镜像
 if ! docker images --format '{{.Repository}}:{{.Tag}}' | grep -q '^python:3.10-slim$'; then
   echo "python:3.10-slim not found, pulling..."

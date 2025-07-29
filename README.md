@@ -25,6 +25,7 @@ pip install fastapi uvicorn pydantic
 
 ### 2. 启动后端服务(开发环境，仅启动pg数据库容器和pgadmin容器并在调试前后端代码过程中始终保持容器的运行)
 ```bash
+sh launch_docker_data.sh
 sh launch_server.sh
 ```
 默认监听 http://127.0.0.1:8000
@@ -37,6 +38,22 @@ sh launch_server.sh
 - 通过以下命令启动pg数据库容器、pgadmin容器、backend容器和frontend容器
 ```bash
 sh launch_docker.sh
+```
+
+## 新增LangGraph工作流
+本项目新增了基于LangGraph框架实现的多Agent协作工作流，提供了更灵活的Agent编排方式。
+
+### 使用LangGraph工作流
+在代码中导入并使用`LangGraphWorkflow`类：
+```python
+from backend.agents.langgraph_workflow import LangGraphWorkflow
+
+# 创建LangGraph工作流实例
+workflow = LangGraphWorkflow(model_client)
+
+# 运行流式工作流
+async for content in workflow.run_stream(user_requirement):
+    print(content)
 ```
 
 

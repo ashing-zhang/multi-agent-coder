@@ -10,8 +10,8 @@ import time
 # 配置
 BASE_URL = "http://localhost:8000"
 TEST_USER = {
-    "username": "testuser",
-    "password": "testpass123"
+    "username": "fuck",
+    "password": "caonima"
 }
 
 def test_auth():

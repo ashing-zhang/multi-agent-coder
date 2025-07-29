@@ -176,18 +176,26 @@ async function onSubmitAgentGeneric({
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         while (true) {
+            // 调用 reader.read() 方法读取流式数据，返回一个 Promise，解析为包含 done 和 value 属性的对象
+            // 前端通过判断 done 属性的值来确定是否还有数据可取，done 为 true 表示流已结束，为 false 表示还有数据可读取
             const { done, value } = await reader.read();
-            if (done) break;
+            console.log('Stream read:', { done, value });
+            if (done) {
+                console.log('Stream finished');
+                break;
+            }
             const chunk = decoder.decode(value, { stream: true });
             result += chunk;
             renderStreamingResult(resultDiv, result);
         }
 
         // 生成完成，使用传入参数
+        console.log('Updating message to done state');
         msgDiv.textContent = msgTextDone;
         msgDiv.style.background = msgTextDoneBg;
         msgDiv.style.color = msgTextDoneColor;
         msgDiv.style.border = msgTextDoneBorder;
+        console.log('Message updated');
 
         // 显示保存按钮，使用传入参数
         try {
