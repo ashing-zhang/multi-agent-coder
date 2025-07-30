@@ -1,5 +1,6 @@
 from typing import Annotated, Sequence, TypedDict, AsyncGenerator
 import asyncio
+import logging
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
@@ -10,7 +11,11 @@ from langgraph.checkpoint.memory import MemorySaver
 from langchain_mcp_adapters.tools import load_mcp_tools
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from .agent_prompts import requirement_prompt, coder_prompt, reviewer_prompt, finalizer_prompt, doc_prompt
+from .agent_prompts import requirement_prompt, coder_prompt, reviewer_prompt, finalizer_prompt, doc_prompt, summary_prompt
+from .summary_agent import SummaryAgent
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 class AgentState(TypedDict):
     # 定义 `messages` 字段，其类型为 `BaseMessage` 序列。
@@ -34,13 +39,26 @@ class LangGraphWorkflow:
         self.reviewer_agent = None
         self.finalizer_agent = None
         self.doc_agent = None
+        self.summary_agent = None
         self.workflow = None
         self.memory = None
         self.app = None
     
     async def initialize(self):
-        """异步初始化工具和工作流组件"""
+        """
+        初始化工作流，编译图，并预热LLM连接。
+        """
+        # 预热/测试 LLM 连接，确保其可用
+        try:
+            logger.info("正在预热 LLM 连接...")
+            await self.llm.ainvoke("ping") # 发送一个简单的、无意义的调用来建立连接
+            logger.info("LLM 连接已准备就绪。")
+        except Exception as e:
+            logger.error(f"LLM 连接预热失败: {e}", exc_info=True)
+            raise  # 抛出异常，防止工作流在不健康的状态下继续运行
+        print("开始初始化 LangGraphWorkflow。")
         # 加载context7工具
+        print("准备加载 context7 工具。")
         self.tools = await self._load_context7_tools_async()
         print("工具加载成功:")
         for tool in self.tools:
@@ -49,16 +67,20 @@ class LangGraphWorkflow:
         self.llm_with_tools = self.llm.bind_tools(self.tools)
         
         # 创建专业Agent
+        print("准备创建专业 Agent。")
         self.requirement_agent = self._create_requirement_agent()
         self.coder_agent = self._create_coder_agent()
         self.reviewer_agent = self._create_reviewer_agent()
         self.finalizer_agent = self._create_finalizer_agent()
         self.doc_agent = self._create_doc_agent()
+        self.summary_agent = SummaryAgent(self.llm)
         
         # 构建工作流图
+        print("准备构建工作流图。")
         self.workflow = self._build_workflow()
         self.memory = MemorySaver()
         self.app = self.workflow.compile(checkpointer=self.memory)
+        print("LangGraphWorkflow 初始化完成。")
     # 每个node包含llm（with tools）、prompt和message占位符
     def _create_requirement_agent(self):
         """创建需求分析Agent"""
@@ -143,14 +165,22 @@ class LangGraphWorkflow:
         :param user_requirement: 用户需求
         :return: 流式结果
         """
+        print('进入workflow的run_stream方法')
+        if not self.app:
+            print("Error: workflow.app 未初始化")
+            return
         initial_state = {"messages": [HumanMessage(content=user_requirement)]}
         # 添加检查点配置
         config = {"configurable": {"thread_id": "1"}}
-        
+        print('准备进入流式生成逻辑')
         # 使用async for迭代器逐个处理每个事件
-        async for event in self.app.astream_events(initial_state, version="v2", config=config):
-            # 检查事件类型并提取内容
-            if event["event"] == "on_chat_model_stream":
-                content = event["data"]["chunk"].content
-                if content:
-                    yield content
+        try:
+            async for event in self.app.astream_events(initial_state, version="v2", config=config):
+                # 检查事件类型并提取内容
+                if event["event"] == "on_chat_model_stream":
+                    content = event["data"]["chunk"].content
+                    if content:
+                        yield content
+        except Exception as e:
+            print(f"Error in run_stream: {e}")
+            raise

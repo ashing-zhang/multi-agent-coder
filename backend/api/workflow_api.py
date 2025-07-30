@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..models.session import Session as Session_History
 from ..models.message import Message
 from ..agents.langgraph_workflow import LangGraphWorkflow
+from ..agents.summary_agent import SummaryAgent
 from ..models.user import User as UserModel
 from ..agents.set_key import create_langchain_llm
 from ..core.database import get_db
@@ -42,11 +43,19 @@ async def workflow_stream(
     logger.info(f"收到的需求 (前50字符): {requirement[:50]}...")
     
     # 用当前用户的api_key创建model_client和llm
-    llm = create_langchain_llm(current_user.api_key)
+    from ..core.config import settings
+    llm = create_langchain_llm(current_user.api_key, settings.DEEPSEEK_BASE_URL)
     logger.info("llm实例化成功")
+    
     # 实例化LangGraphWorkflow
     workflow = LangGraphWorkflow(llm)
-    await workflow.initialize()
+    logger.info("准备初始化 LangGraphWorkflow。")
+    try:
+        await workflow.initialize()
+        logger.info("LangGraphWorkflow 初始化成功。")
+    except Exception as e:
+        logger.error(f"LangGraphWorkflow 初始化失败: {e}", exc_info=True)
+        raise
     # 检查 workflow 是否创建成功并记录日志
     if workflow:
         logger.info("LangGraphWorkflow 实例创建成功。")
@@ -85,7 +94,7 @@ async def workflow_stream(
             # 只有当客户端开始读取响应时，下面的代码才会执行
             logger.info("event_stream: 客户端已连接，开始迭代 workflow.run_stream。")
             async for content in workflow.run_stream(requirement):
-                # logger.info(f"event_stream: 从 workflow 收到数据块: {content}")
+                logger.info(f"event_stream: 从 workflow 收到数据块: {content}")
                 if isinstance(content, str):
                     answer_chunks.append(content)
                     yield content
@@ -97,18 +106,24 @@ async def workflow_stream(
             logger.error(f"event_stream: 在流式处理中发生异常: {e}", exc_info=True)
             yield f"Error: {str(e)}"
         finally:
-            # 4. 回答生成完毕后，存入Message表
-            logger.info("event_stream: 进入 finally 块，准备将完整回答存入数据库。")
+            # 4. 回答生成完毕后，使用摘要agent处理完整回答并生成摘要
             full_answer = "".join(answer_chunks)
             if full_answer:
+                # 使用摘要agent处理完整回答并生成摘要
+                summary_agent = SummaryAgent(llm)
+                summary_content = await summary_agent.process_and_store(session_id, full_answer, db)
+                logger.info(f"event_stream: 摘要已生成并存入数据库。")
+                
+                # 存储摘要内容
                 assistant_message = Message(
                     session_id=session_id,
-                    content=full_answer,
+                    content=summary_content,
                     role="assistant"
                 )
+                logger.info(f"event_stream: 助手回答摘要内容: {summary_content}")
                 db.add(assistant_message)
                 await db.commit()
-                logger.info(f"event_stream: 助手回答已成功存入数据库。")
+                logger.info(f"event_stream: 助手回答摘要已成功存入数据库。")
             else:
                 logger.warning("event_stream: 未生成任何有效内容，无需存入数据库。")
 

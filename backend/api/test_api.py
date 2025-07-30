@@ -8,6 +8,7 @@ from ..agents.set_key import set_deepseek_api_key
 from ..models.user import User as UserModel
 from ..core.database import get_db
 from ..core.utils import get_current_user
+from backend.core.config import settings
 
 
 router = APIRouter()
@@ -23,7 +24,7 @@ async def test_stream(
     code = data.get("requirement", "")
     
     # 用当前用户的api_key创建model_client
-    client = set_deepseek_api_key(current_user.api_key)
+    client = set_deepseek_api_key(current_user.api_key, settings.DEEPSEEK_BASE_URL)
     agent = TestAgent(client)
 
     # 1. 创建新的Session_History记录

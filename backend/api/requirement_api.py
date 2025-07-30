@@ -17,6 +17,8 @@ from backend.models.user import User as UserModel
 from backend.core.database import get_db
 from backend.agents.requirement_agent import RequirementAgent
 from backend.agents.set_key import set_deepseek_api_key
+from ..agents.summary_agent import SummaryAgent
+from backend.core.config import settings
 
 router = APIRouter()
 
@@ -31,7 +33,7 @@ async def requirement_stream(
     data = await request.json()
     requirement = data.get("description", "")
     # 用当前用户的api_key创建model_client
-    client = set_deepseek_api_key(current_user.api_key)
+    client = set_deepseek_api_key(current_user.api_key, settings.DEEPSEEK_BASE_URL)
     agent = RequirementAgent(client)
 
     # 1. 创建新的Session_History记录
@@ -61,11 +63,15 @@ async def requirement_stream(
         async for token in agent.handle_message_stream(requirement):
             answer_chunks.append(token)
             yield token
-        # 4. 回答生成完毕后，存入Message表
+        # 4. 回答生成完毕后，使用摘要agent处理完整回答并生成摘要
         full_answer = "".join(answer_chunks)
+        summary_agent = SummaryAgent(client)
+        summary_content = await summary_agent.process_and_store(session_id, full_answer, db)
+        
+        # 将摘要内容存入Message表
         assistant_message = Message(
             session_id=session_id,
-            content=full_answer,
+            content=summary_content,
             role="assistant"
         )
         db.add(assistant_message)

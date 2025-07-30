@@ -25,7 +25,7 @@ pip install fastapi uvicorn pydantic
 
 ### 2. 启动后端服务(开发环境，仅启动pg数据库容器和pgadmin容器并在调试前后端代码过程中始终保持容器的运行)
 ```bash
-sh launch_docker_data.sh
+sh launch_docker_database.sh
 sh launch_server.sh
 ```
 默认监听 http://127.0.0.1:8000
