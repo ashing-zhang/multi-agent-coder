@@ -151,6 +151,10 @@ async function onSubmitAgentGeneric({
     // 创建结果区域，使用传入参数
     const resultDiv = createResultArea(resultArea, resultDivClass, resultDivTitle);
 
+    // 移除已存在的保存按钮
+    let saveBtn = resultArea.querySelector('.agent-save-btn');
+    if (saveBtn) saveBtn.remove();
+
     try {
         let result = '';
         const token = localStorage.getItem('token');

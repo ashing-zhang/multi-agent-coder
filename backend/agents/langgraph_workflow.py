@@ -44,11 +44,10 @@ class LangGraphWorkflow:
         self.memory = None
         self.app = None
     
-    async def initialize(self):
+    async def _warm_up_llm(self):
         """
-        初始化工作流，编译图，并预热LLM连接。
+        预热/测试 LLM 连接，确保其可用
         """
-        # 预热/测试 LLM 连接，确保其可用
         try:
             logger.info("正在预热 LLM 连接...")
             await self.llm.ainvoke("ping") # 发送一个简单的、无意义的调用来建立连接
@@ -56,6 +55,13 @@ class LangGraphWorkflow:
         except Exception as e:
             logger.error(f"LLM 连接预热失败: {e}", exc_info=True)
             raise  # 抛出异常，防止工作流在不健康的状态下继续运行
+    
+    async def initialize(self):
+        """
+        初始化工作流，编译图，并预热LLM连接。
+        """
+        # 预热/测试 LLM 连接，确保其可用
+        await self._warm_up_llm()
         print("开始初始化 LangGraphWorkflow。")
         # 加载context7工具
         print("准备加载 context7 工具。")
@@ -169,6 +175,8 @@ class LangGraphWorkflow:
         if not self.app:
             print("Error: workflow.app 未初始化")
             return
+        # 预热/测试 LLM 连接，确保其可用
+        await self._warm_up_llm()
         initial_state = {"messages": [HumanMessage(content=user_requirement)]}
         # 添加检查点配置
         config = {"configurable": {"thread_id": "1"}}
