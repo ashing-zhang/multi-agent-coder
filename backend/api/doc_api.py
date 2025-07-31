@@ -3,13 +3,14 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.models.session import Session as Session_History
 from backend.models.message import Message
-from backend.agents.doc_agent import DocAgent
 from backend.agents.set_key import set_deepseek_api_key
 from backend.models.user import User as UserModel
 from ..core.database import get_db
 from ..core.utils import get_current_user
 from ..agents.summary_agent import SummaryAgent
 from backend.core.config import settings
+from ..agents.base_agent import BaseAgent
+from ..agents.agent_prompts import doc_prompt
 
 router = APIRouter()
 
@@ -26,7 +27,7 @@ async def doc_stream(
     
     # 用当前用户的api_key创建model_client
     client = set_deepseek_api_key(current_user.api_key, settings.DEEPSEEK_BASE_URL)
-    agent = DocAgent(client)
+    agent = BaseAgent(name="doc_agent", system_message=doc_prompt, model_client=client)
 
     # 1. 创建新的Session_History记录
     new_session = Session_History(

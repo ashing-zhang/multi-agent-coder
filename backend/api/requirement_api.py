@@ -3,11 +3,9 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.models.user import User
 from pydantic import BaseModel
-from backend.agents.requirement_agent import RequirementAgent
 from datetime import datetime
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import StreamingResponse
-from ..agents.requirement_agent import RequirementAgent
 from ..models.user import User
 from ..models.session import Session as Session_History
 from ..models.message import Message
@@ -15,10 +13,11 @@ from .set_key import get_current_user
 from fastapi import Depends, Request
 from backend.models.user import User as UserModel
 from backend.core.database import get_db
-from backend.agents.requirement_agent import RequirementAgent
 from backend.agents.set_key import set_deepseek_api_key
 from ..agents.summary_agent import SummaryAgent
 from backend.core.config import settings
+from ..agents.base_agent import BaseAgent
+from ..agents.agent_prompts import requirement_prompt
 
 router = APIRouter()
 
@@ -34,7 +33,7 @@ async def requirement_stream(
     requirement = data.get("description", "")
     # 用当前用户的api_key创建model_client
     client = set_deepseek_api_key(current_user.api_key, settings.DEEPSEEK_BASE_URL)
-    agent = RequirementAgent(client)
+    agent = BaseAgent(name="requirement_agent", system_message=requirement_prompt, model_client=client)
 
     # 1. 创建新的Session_History记录
     new_session = Session_History(

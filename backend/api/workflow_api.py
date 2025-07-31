@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..models.session import Session as Session_History
 from ..models.message import Message
-from ..agents.langgraph_workflow import LangGraphWorkflow
+from ..agents.agent_workflow import LangGraphWorkflow
 from ..agents.summary_agent import SummaryAgent
 from ..models.user import User as UserModel
 from ..agents.set_key import create_langchain_llm

@@ -3,13 +3,14 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..models.session import Session as Session_History
 from ..models.message import Message
-from ..agents.finalizer_agent import FinalizerAgent
 from ..agents.set_key import set_deepseek_api_key
 from ..models.user import User as UserModel
 from ..core.database import get_db
 from ..core.utils import get_current_user
 from ..agents.summary_agent import SummaryAgent
 from backend.core.config import settings
+from ..agents.base_agent import BaseAgent
+from ..agents.agent_prompts import finalizer_prompt
 
 router = APIRouter()
 
@@ -26,7 +27,7 @@ async def finalizer_stream(
     
     # 用当前用户的api_key创建model_client
     client = set_deepseek_api_key(current_user.api_key, settings.DEEPSEEK_BASE_URL)
-    agent = FinalizerAgent(client)
+    agent = BaseAgent(name="finalizer_agent", system_message=finalizer_prompt, model_client=client)
 
     # 1. 创建新的Session_History记录
     new_session = Session_History(

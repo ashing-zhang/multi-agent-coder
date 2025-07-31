@@ -1,163 +1,194 @@
-from autogen_agentchat.agents import AssistantAgent
-from autogen_agentchat.teams import SelectorGroupChat
-# 框架的mcp模块完成了JSON RPC的功能，使用户不用关心JSON RPC的细节，只需要关注业务逻辑。
-from autogen_ext.tools.mcp import StdioServerParams, McpWorkbench
-from .test_agent import TestAgent
-from typing import AsyncGenerator, List
+from typing import Annotated, Sequence, TypedDict, AsyncGenerator
 import asyncio
+import logging
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.checkpoint.memory import MemorySaver
+from langchain_mcp_adapters.tools import load_mcp_tools
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+from .agent_prompts import requirement_prompt, coder_prompt, reviewer_prompt, finalizer_prompt, doc_prompt, summary_prompt
+from .summary_agent import SummaryAgent
 
-class AgentWorkflow:
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+class AgentState(TypedDict):
+    # 定义 `messages` 字段，其类型为 `BaseMessage` 序列。
+    # `Annotated` 用于为类型添加额外的元数据，这里使用 `add_messages` 作为注解，
+    # 表明该字段在某些场景下可能会使用 `add_messages` 函数来处理消息。
+    messages: Annotated[Sequence[BaseMessage], add_messages]
+
+class LangGraphWorkflow:
     """
-    AgentWorkflow 是一个异步上下文管理器，因为它实现了 __aenter__ 和 __aexit__ 方法。
-    使用 AutoGen 框架实现的多 Agent 协作工作流，不支持人工介入。
+    使用LangGraph框架实现的多Agent协作工作流
     """
-    def __init__(self, model_client, llm=None):
+    def __init__(self, llm):
         # 配置LLM模型参数
-        self.model_client = model_client
         self.llm = llm
-        # 检查npx是否可用，如果不可用则使用备用配置
-        try:
-            import subprocess
-            subprocess.run(['npx', '--version'], capture_output=True, check=True)
-            self.server_params = StdioServerParams(
-                command='npx',
-                args=['-y','@upstash/context7-mcp']
-            )
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            # 如果npx不可用，使用备用MCP服务器配置
-            # 这里可以配置一个本地的MCP服务器或者其他替代方案
-            print("警告: npx不可用，使用备用MCP配置")
-            self.server_params = None
-        self.mcp_workbench = None
         
-    async def __aenter__(self):
-        """异步上下文管理器入口，初始化MCP工作台"""
-        self.mcp_workbench = McpWorkbench(server_params=self.server_params)
-        await self.mcp_workbench.__aenter__()
+        # 初始化其他属性
+        self.tools = None
+        self.llm_with_tools = None
+        self.requirement_agent = None
+        self.coder_agent = None
+        self.reviewer_agent = None
+        self.finalizer_agent = None
+        self.doc_agent = None
+        self.summary_agent = None
+        self.workflow = None
+        self.memory = None
+        self.app = None
+    
+    async def _warm_up_llm(self):
+        """
+        预热/测试 LLM 连接，确保其可用
+        """
+        try:
+            logger.info("正在预热 LLM 连接...")
+            await self.llm.ainvoke("ping") # 发送一个简单的、无意义的调用来建立连接
+            logger.info("LLM 连接已准备就绪。")
+        except Exception as e:
+            logger.error(f"LLM 连接预热失败: {e}", exc_info=True)
+            raise  # 抛出异常，防止工作流在不健康的状态下继续运行
+    
+    async def initialize(self):
+        """
+        初始化工作流，编译图，并预热LLM连接。
+        """
+        # 预热/测试 LLM 连接，确保其可用
+        await self._warm_up_llm()
+        print("开始初始化 LangGraphWorkflow。")
+        # 加载context7工具
+        print("准备加载 context7 工具。")
+        self.tools = await self._load_context7_tools_async()
+        print("工具加载成功:")
+        for tool in self.tools:
+            print(f"  - {tool.name}")
+        # 将工具绑定到LLM
+        self.llm_with_tools = self.llm.bind_tools(self.tools)
         
         # 创建专业Agent
-        self.requirement_agent = AssistantAgent(
-            name="requirement_agent",
-            system_message="你是需求分析专家，负责将用户需求拆解为清晰的开发任务。",
-            model_client=self.model_client,
-            workbench=self.mcp_workbench
-        )
-        self.coder_agent = AssistantAgent(
-            name="coder_agent",
-            system_message="你是资深程序员，负责根据需求编写高质量代码。",
-            model_client=self.model_client,
-            workbench=self.mcp_workbench
-        )
-        self.reviewer_agent = AssistantAgent(
-            name="reviewer_agent",
-            system_message="你是代码审查专家，负责找出代码中的问题并提出改进建议。",
-            model_client=self.model_client,
-            workbench=self.mcp_workbench
-        )
-        self.finalizer_agent = AssistantAgent(
-            name="finalizer_agent",
-            system_message="你是代码整合专家，负责根据审查建议优化代码。",
-            model_client=self.model_client,
-            workbench=self.mcp_workbench
-        )
-        self.doc_agent = AssistantAgent(
-            name="doc_agent",
-            system_message="你是文档专家，负责为最终代码生成清晰的使用文档。",
-            model_client=self.model_client,
-            workbench=self.mcp_workbench
-        )
+        print("准备创建专业 Agent。")
+        self.requirement_agent = self._create_requirement_agent()
+        self.coder_agent = self._create_coder_agent()
+        self.reviewer_agent = self._create_reviewer_agent()
+        self.finalizer_agent = self._create_finalizer_agent()
+        self.doc_agent = self._create_doc_agent()
+        self.summary_agent = SummaryAgent(self.llm)
         
-        # 移除了用户代理（不支持人工介入）
-
-        # 创建群聊环境
-        self.agents: List[AssistantAgent] = [
-            self.requirement_agent, self.coder_agent, 
-            self.reviewer_agent, self.finalizer_agent, self.doc_agent
-        ]
-        # 定义Agent之间的流向规则
-        allowed_transitions = {
-            self.requirement_agent: [self.coder_agent],
-            self.coder_agent: [self.reviewer_agent],
-            self.reviewer_agent: [self.finalizer_agent],
-            self.finalizer_agent: [self.doc_agent],
-            self.doc_agent: [self.doc_agent]  # doc_agent是最终节点，不流向其他Agent
-        }
+        # 构建工作流图
+        print("准备构建工作流图。")
+        self.workflow = self._build_workflow()
+        self.memory = MemorySaver()
+        self.app = self.workflow.compile(checkpointer=self.memory)
+        print("LangGraphWorkflow 初始化完成。")
+    # 每个node包含llm（with tools）、prompt和message占位符
+    def _create_requirement_agent(self):
+        """创建需求分析Agent"""
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", requirement_prompt),
+            ("placeholder", "{messages}"),
+        ])
+        # 使用管道操作符将提示模板与LLM模型连接，当输入数据时，
+        # 数据会先经过提示模板处理，然后将处理后的结果传递给LLM模型进行推理，最后返回推理结果。
+        return prompt | self.llm_with_tools
+    
+    def _create_coder_agent(self):
+        """创建编码Agent"""
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", coder_prompt),
+            ("placeholder", "{messages}"),
+        ])
+        return prompt | self.llm_with_tools
+    
+    def _create_reviewer_agent(self):
+        """创建代码审查Agent"""
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", reviewer_prompt),
+            ("placeholder", "{messages}"),
+        ])
+        return prompt | self.llm_with_tools
+    
+    def _create_finalizer_agent(self):
+        """创建代码整合Agent"""
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", finalizer_prompt),
+            ("placeholder", "{messages}"),
+        ])
+        return prompt | self.llm_with_tools
+    
+    def _create_doc_agent(self):
+        """创建文档生成Agent"""
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", doc_prompt),
+            ("placeholder", "{messages}"),
+        ])
+        return prompt | self.llm_with_tools
+    
+    def _build_workflow(self):
+        """构建LangGraph工作流"""
+        workflow = StateGraph(AgentState)
         
-        # 定义候选函数，根据allowed_transitions确定下一个Agent
-        def candidate_func(context) -> List[AssistantAgent]:
-            if not context:
-                return [self.requirement_agent]
-                
-            last_speaker = context[-1].source
-            # 检查last_speaker的类型，如果是字符串则直接使用，否则获取其name属性
-            if isinstance(last_speaker, str):
-                print(f"当前发言者: {last_speaker}")
-                # 根据名称找到对应的agent对象
-                speaker_agent = next((agent for agent in self.agents if agent.name == last_speaker), self.requirement_agent)
-            else:
-                print(f"当前发言者: {last_speaker.name}")
-                speaker_agent = last_speaker
-            return allowed_transitions.get(speaker_agent, [self.requirement_agent])
+        # 添加节点
+        workflow.add_node("requirement", self.requirement_agent)
+        workflow.add_node("coder", self.coder_agent)
+        workflow.add_node("reviewer", self.reviewer_agent)
+        workflow.add_node("finalizer", self.finalizer_agent)
+        workflow.add_node("doc", self.doc_agent)
         
-        # 导入StopMessageTermination
-        from autogen_agentchat.conditions import StopMessageTermination
+        # 添加边
+        workflow.add_edge(START, "requirement")
+        workflow.add_edge("requirement", "coder")
+        workflow.add_edge("coder", "reviewer")
+        workflow.add_edge("reviewer", "finalizer")
+        workflow.add_edge("finalizer", "doc")
+        # 传递到 END 的任何数据都会被作为最终结果返回
+        # ​内容构成​：输出为结束节点执行后的完整 State 对象（可自定义精简）
+        workflow.add_edge("doc", END)
         
-        # 实例化StopMessageTermination作为终止条件
-        self.termination_condition = StopMessageTermination()
-
-        self.team = SelectorGroupChat(
-            participants=self.agents,
-            model_client=self.model_client,
-            model_client_streaming=True,
-            candidate_func=candidate_func,  # 传递自定义的候选函数
-            termination_condition=self.termination_condition,  # 传递终止条件实例
+        return workflow
+    
+    async def _load_context7_tools_async(self):
+        """异步加载context7工具"""
+        server_params = StdioServerParameters(
+            command="npx",
+            args=["-y", "@upstash/context7-mcp"]
         )
-        
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """异步上下文管理器出口，清理MCP工作台"""
-        if self.mcp_workbench:
-            await self.mcp_workbench.__aexit__(exc_type, exc_val, exc_tb)
+        async with stdio_client(server_params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                tools = await load_mcp_tools(session)
+                return tools
 
     async def run_stream(self, user_requirement: str) -> AsyncGenerator[str, None]:
         """
-        流式运行AutoGen多Agent工作流，实现token级别流式输出
+        流式运行LangGraph多Agent工作流，实现token级别流式输出
         :param user_requirement: 用户需求
         :return: 流式结果
         """
-        print('Starting team.run_stream')
-        # run_stream：return -> AsyncGenerator[BaseAgentEvent | BaseChatMessage | TaskResult, None]
-        async for response_event in self.team.run_stream(task=user_requirement,output_task_messages=False):
-            # 检查是否为StopMessage，如果是则终止流式输出
-            from autogen_core.messages import StopMessage
-            if isinstance(response_event, StopMessage):
-                print("✅ 流程终止：收到StopMessage")
-                break
-            
-            # 处理不同类型的流式输出项
-            print('type of response_event:',type(response_event))
-            if hasattr(response_event, 'messages'):
-                # 如果是TaskResult，迭代其消息
-                for message in response_event.messages:
-                    if hasattr(message, 'content'):
-                        yield message.content
-                    else:
-                        yield str(message)
-            else:
-                # 单个事件（BaseAgentEvent或BaseChatMessage）
-                if hasattr(response_event, 'content'):
-                    yield response_event.content
-                else:
-                    yield str(response_event)
-    
-    def _extract_final_code(self, chat_history):
-        # 实现代码提取逻辑
-        pass
-        
-    def _extract_test_code(self, chat_history):
-        # 实现测试代码提取逻辑
-        pass
-
-    
-        
+        print('进入workflow的run_stream方法')
+        if not self.app:
+            print("Error: workflow.app 未初始化")
+            return
+        # 预热/测试 LLM 连接，确保其可用
+        await self._warm_up_llm()
+        initial_state = {"messages": [HumanMessage(content=user_requirement)]}
+        # 添加检查点配置
+        config = {"configurable": {"thread_id": "1"}}
+        print('准备进入流式生成逻辑')
+        # 使用async for迭代器逐个处理每个事件
+        try:
+            async for event in self.app.astream_events(initial_state, version="v2", config=config):
+                # 检查事件类型并提取内容
+                if event["event"] == "on_chat_model_stream":
+                    content = event["data"]["chunk"].content
+                    if content:
+                        yield content
+        except Exception as e:
+            print(f"Error in run_stream: {e}")
+            raise
