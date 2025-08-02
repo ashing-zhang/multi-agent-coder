@@ -16,3 +16,4 @@ langgraph
 langchain-community
 langchain_openai
 langchain_mcp_adapters
+confluent-kafka

@@ -13,21 +13,19 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from .agent_prompts import requirement_prompt, coder_prompt, reviewer_prompt, finalizer_prompt, doc_prompt, summary_prompt
 from .summary_agent import SummaryAgent
+from .base_agent import BaseAgent, AgentState
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-class AgentState(TypedDict):
-    # 定义 `messages` 字段，其类型为 `BaseMessage` 序列。
-    # `Annotated` 用于为类型添加额外的元数据，这里使用 `add_messages` 作为注解，
-    # 表明该字段在某些场景下可能会使用 `add_messages` 函数来处理消息。
-    messages: Annotated[Sequence[BaseMessage], add_messages]
-
-class LangGraphWorkflow:
+class MultiNode(BaseAgent):
     """
-    使用LangGraph框架实现的多Agent协作工作流
+    使用LangGraph框架实现的多Agent协作工作流，继承自BaseAgent。
     """
     def __init__(self, llm):
+        # 调用父类的构造函数
+        super().__init__(llm)
+        
         # 配置LLM模型参数
         self.llm = llm
         
@@ -44,24 +42,10 @@ class LangGraphWorkflow:
         self.memory = None
         self.app = None
     
-    async def _warm_up_llm(self):
-        """
-        预热/测试 LLM 连接，确保其可用
-        """
-        try:
-            logger.info("正在预热 LLM 连接...")
-            await self.llm.ainvoke("ping") # 发送一个简单的、无意义的调用来建立连接
-            logger.info("LLM 连接已准备就绪。")
-        except Exception as e:
-            logger.error(f"LLM 连接预热失败: {e}", exc_info=True)
-            raise  # 抛出异常，防止工作流在不健康的状态下继续运行
-    
     async def initialize(self):
         """
         初始化工作流，编译图，并预热LLM连接。
         """
-        # 预热/测试 LLM 连接，确保其可用
-        await self._warm_up_llm()
         print("开始初始化 LangGraphWorkflow。")
         # 加载context7工具
         print("准备加载 context7 工具。")
@@ -165,7 +149,25 @@ class LangGraphWorkflow:
                 tools = await load_mcp_tools(session)
                 return tools
 
-    async def run_stream(self, user_requirement: str) -> AsyncGenerator[str, None]:
+    async def handle_message(self, content: str) -> str:
+        """
+        处理消息并返回响应。
+        
+        Args:
+            content: 用户输入的消息内容
+            
+        Returns:
+            str: Agent的响应
+        """        
+        if not self.app:
+            raise ValueError("工作流未初始化")
+            
+        initial_state = {"messages": [HumanMessage(content=content)]}
+        config = {"configurable": {"thread_id": "MultiNode"}}
+        result = await self.app.ainvoke(initial_state, config=config)
+        return result["messages"][-1].content
+
+    async def handle_message_stream(self, content: str) -> AsyncGenerator[str, None]:
         """
         流式运行LangGraph多Agent工作流，实现token级别流式输出
         :param user_requirement: 用户需求
@@ -175,9 +177,7 @@ class LangGraphWorkflow:
         if not self.app:
             print("Error: workflow.app 未初始化")
             return
-        # 预热/测试 LLM 连接，确保其可用
-        await self._warm_up_llm()
-        initial_state = {"messages": [HumanMessage(content=user_requirement)]}
+        initial_state = {"messages": [HumanMessage(content=content)]}
         # 添加检查点配置
         config = {"configurable": {"thread_id": "1"}}
         print('准备进入流式生成逻辑')

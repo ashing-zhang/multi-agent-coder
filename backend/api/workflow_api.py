@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..models.session import Session as Session_History
 from ..models.message import Message
-from ..agents.agent_workflow import LangGraphWorkflow
+from ..agents.agent_workflow import MultiNode
 from ..agents.summary_agent import SummaryAgent
 from ..models.user import User as UserModel
 from ..agents.set_key import create_langchain_llm
@@ -12,12 +12,16 @@ from ..core.database import get_db
 from ..core.utils import get_current_user
 from .set_key import get_current_user
 from pydantic import BaseModel
+from ..services.kafka_service import KafkaService
 
 # --- 新增：设置日志 ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# 初始化Kafka服务
+kafka_service = KafkaService()
 
 class WorkflowRequest(BaseModel):
     requirement: str
@@ -42,90 +46,50 @@ async def workflow_stream(
     requirement = data.get("description", "")
     logger.info(f"收到的需求 (前50字符): {requirement[:50]}...")
     
+    # 将请求发送到Kafka
+    kafka_service.produce_message("agent_request", {"requirement": requirement, "user_id": current_user.id})
+    
     # 用当前用户的api_key创建model_client和llm
     from ..core.config import settings
     llm = create_langchain_llm(current_user.api_key, settings.DEEPSEEK_BASE_URL)
     logger.info("llm实例化成功")
     
-    # 实例化LangGraphWorkflow
-    workflow = LangGraphWorkflow(llm)
-    logger.info("准备初始化 LangGraphWorkflow。")
+    # 实例化MultiNode
+    workflow = MultiNode(llm)
+    logger.info("准备初始化 MultiNode。")
     try:
         await workflow.initialize()
-        logger.info("LangGraphWorkflow 初始化成功。")
+        logger.info("MultiNode 初始化成功。")
     except Exception as e:
-        logger.error(f"LangGraphWorkflow 初始化失败: {e}", exc_info=True)
+        logger.error(f"MultiNode 初始化失败: {e}", exc_info=True)
         raise
     # 检查 workflow 是否创建成功并记录日志
     if workflow:
-        logger.info("LangGraphWorkflow 实例创建成功。")
+        logger.info("MultiNode 实例创建成功。")
     else:
-        logger.error("LangGraphWorkflow 实例创建失败。")
-    
-    # 由于LangGraphWorkflow不是异步上下文管理器，我们不需要使用async with语句
+        logger.error("MultiNode 实例创建失败。")
+
+    # 由于MultiNode不是异步上下文管理器，我们不需要使用async with语句
     # 直接使用workflow.run_stream方法
     # 1. 创建新的Session_History记录
-    new_session = Session_History(
-        user_id=current_user.id,
-        session_name=f"Agent Workflow: {requirement[:30]}"
-    )
-    db.add(new_session)
-    await db.commit()
-    await db.refresh(new_session)
-    session_id = new_session.session_id
-    logger.info(f"数据库会话已创建，Session ID: {session_id}")
+    from ..services.agent_service import AgentService
+    session_id = await AgentService.create_session_record(db, current_user.id, requirement, "Agent Workflow")
 
     # 2. 创建用户问题的Message记录
-    user_message = Message(
-        session_id=session_id,
-        content=requirement,
-        role="user"
-    )
-    db.add(user_message)
-    await db.commit()
-    await db.refresh(user_message)
-    logger.info("用户消息已存入数据库。")
+    await AgentService.create_user_message_record(db, session_id, requirement)
 
     # 3. 生成AI回答并流式返回，同时收集完整回答
-    async def event_stream():
-        logger.info("event_stream: 生成器已创建。等待客户端拉取数据...")
-        answer_chunks = []
+    async def generate_response():
+        full_response = ""
         try:
-            # 只有当客户端开始读取响应时，下面的代码才会执行
-            logger.info("event_stream: 客户端已连接，开始迭代 workflow.run_stream。")
-            async for content in workflow.run_stream(requirement):
-                logger.info(f"event_stream: 从 workflow 收到数据块: {content}")
-                if isinstance(content, str):
-                    answer_chunks.append(content)
-                    yield content
-                else:
-                    logger.warning(f"event_stream: 收到非字符串类型的数据块: {type(content)}，已忽略。")
+            async for content in workflow.handle_message_stream(requirement):
+                full_response += content
+                yield content
             
-            logger.info("event_stream: workflow.run_stream 迭代完成。")
+            # 4. 创建AI回答的Message记录
+            await AgentService.create_ai_message_record(db, session_id, full_response)
         except Exception as e:
-            logger.error(f"event_stream: 在流式处理中发生异常: {e}", exc_info=True)
-            yield f"Error: {str(e)}"
-        finally:
-            # 4. 回答生成完毕后，使用摘要agent处理完整回答并生成摘要
-            full_answer = "".join(answer_chunks)
-            if full_answer:
-                # 使用摘要agent处理完整回答并生成摘要
-                summary_agent = SummaryAgent(llm)
-                summary_content = await summary_agent.process_and_store(session_id, full_answer, db)
-                logger.info(f"event_stream: 摘要已生成并存入数据库。")
-                
-                # 存储摘要内容
-                assistant_message = Message(
-                    session_id=session_id,
-                    content=summary_content,
-                    role="assistant"
-                )
-                logger.info(f"event_stream: 助手回答摘要内容: {summary_content}")
-                db.add(assistant_message)
-                await db.commit()
-                logger.info(f"event_stream: 助手回答摘要已成功存入数据库。")
-            else:
-                logger.warning("event_stream: 未生成任何有效内容，无需存入数据库。")
-
-    logger.info("准备返回 StreamingResponse 对象。FastAPI 将接管后续流程。")
-    return StreamingResponse(event_stream(), media_type="text/plain")
+            logger.error(f"处理流式响应时发生错误: {e}", exc_info=True)
+            yield f"Error: {e}"
+    
+    return StreamingResponse(generate_response(), media_type="text/plain")

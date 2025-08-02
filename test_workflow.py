@@ -1,5 +1,5 @@
 import asyncio
-from backend.agents.agent_workflow import AgentWorkflow
+from backend.agents.agent_workflow import MultiNode
 from autogen_ext.models.openai import OpenAIChatCompletion
 
 async def main():
@@ -10,10 +10,12 @@ async def main():
     )
     
     # Initialize the workflow
-    async with AgentWorkflow(model_client) as workflow:
-        # Run a simple test
-        async for chunk in workflow.run_stream("Write a simple 'Hello, World!' program in Python."):
-            print(chunk, end="", flush=True)
+    workflow = MultiNode(model_client)
+    await workflow.initialize()
+    
+    # Run a simple test
+    async for chunk in workflow.handle_message_stream("Write a simple 'Hello, World!' program in Python."):
+        print(chunk, end="", flush=True)
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -1,6 +1,6 @@
 import asyncio
 from langchain_openai import ChatOpenAI
-from langgraph_workflow import LangGraphWorkflow
+from langgraph_workflow import MultiNode
 
 def test_langgraph_workflow():
     # 创建LLM实例
@@ -11,8 +11,8 @@ def test_langgraph_workflow():
         temperature=0.7
     )
     
-    # 创建LangGraphWorkflow实例
-    workflow = LangGraphWorkflow(llm)
+    # 创建MultiNode实例
+    workflow = MultiNode(llm)
     
     # 检查是否加载了工具
     if hasattr(workflow, 'tools') and workflow.tools:

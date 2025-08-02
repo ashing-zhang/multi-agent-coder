@@ -1,41 +1,32 @@
 import asyncio
-import sys
-import os
-
-# 添加项目根目录到Python路径
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
 from langchain_openai import ChatOpenAI
-from langgraph_workflow import LangGraphWorkflow
+from langgraph_workflow import MultiNode
 
-def test_langgraph_workflow_async():
-    """测试异步初始化的LangGraphWorkflow"""
-    async def run_test():
-        # 创建一个模拟的LLM实例
-        llm = ChatOpenAI(api_key="your-api-key-here")
-        
-        # 实例化LangGraphWorkflow
-        workflow = LangGraphWorkflow(llm)
-        
-        # 异步初始化
-        await workflow.initialize()
-        
-        # 检查工具是否加载成功
-        if workflow.tools:
-            print("工具加载成功:")
-            for tool in workflow.tools:
-                print(f"  - {tool.name}")
-        else:
-            print("工具加载失败")
-        
-        # 检查其他组件是否初始化成功
-        if workflow.app:
-            print("LangGraphWorkflow 初始化成功")
-        else:
-            print("LangGraphWorkflow 初始化失败")
+async def test_langgraph_workflow_async():
+    # 创建LLM实例
+    llm = ChatOpenAI(
+        model="deepseek-chat",
+        api_key="sk-09ef1979840d4761a31d959da730deb5",
+        base_url="https://api.deepseek.com/v1",
+        temperature=0.7
+    )
     
-    # 运行异步测试
-    asyncio.run(run_test())
+    # 创建MultiNode实例
+    workflow = MultiNode(llm)
+    await workflow.initialize()
+    
+    # 模拟用户需求
+    user_requirement = "编写一个Python函数，计算斐波那契数列的第n项。"
+    
+    print(f"用户需求: {user_requirement}")
+    print("开始处理...")
+    
+    # 运行工作流并获取响应
+    async for chunk in workflow.handle_message_stream(user_requirement):
+        if chunk:
+            print(chunk, end='', flush=True)
+    
+    print("\n处理完成。")
 
 if __name__ == "__main__":
-    test_langgraph_workflow_async()
+    asyncio.run(test_langgraph_workflow_async())

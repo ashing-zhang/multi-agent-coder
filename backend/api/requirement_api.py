@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,11 +14,19 @@ from .set_key import get_current_user
 from fastapi import Depends, Request
 from backend.models.user import User as UserModel
 from backend.core.database import get_db
-from backend.agents.set_key import set_deepseek_api_key
+from backend.agents.set_key import create_langchain_llm
 from ..agents.summary_agent import SummaryAgent
 from backend.core.config import settings
-from ..agents.base_agent import BaseAgent
+from ..agents.single_agent import SingleNode
 from ..agents.agent_prompts import requirement_prompt
+from ..services.kafka_service import KafkaService
+
+# --- 新增：设置日志 ---
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# 初始化Kafka服务
+kafka_service = KafkaService()
 
 router = APIRouter()
 
@@ -29,11 +38,17 @@ async def requirement_stream(
     db: AsyncSession = Depends(get_db)
 ):
     """流式需求分析API，返回内容并存入数据库（sessions和messages表）"""
+    logger.info("API /stream 被调用。")
     data = await request.json()
     requirement = data.get("description", "")
+    logger.info(f"收到的需求 (前50字符): {requirement[:50]}...")
+    
+    # 将请求发送到Kafka
+    kafka_service.produce_message("agent_request", {"requirement": requirement, "user_id": current_user.id})
+    
     # 用当前用户的api_key创建model_client
-    client = set_deepseek_api_key(current_user.api_key, settings.DEEPSEEK_BASE_URL)
-    agent = BaseAgent(name="requirement_agent", system_message=requirement_prompt, model_client=client)
+    llm = create_langchain_llm(current_user.api_key, settings.DEEPSEEK_BASE_URL)
+    agent = SingleNode(llm=llm, system_message=requirement_prompt)
 
     # 1. 创建新的Session_History记录
     new_session = Session_History(
@@ -44,6 +59,7 @@ async def requirement_stream(
     await db.commit()
     await db.refresh(new_session)
     session_id = new_session.session_id  # 立即取出
+    logger.info(f"数据库会话已创建，Session ID: {session_id}")
 
     # 2. 创建用户问题的Message记录
     user_message = Message(
@@ -55,26 +71,43 @@ async def requirement_stream(
     await db.commit()
     # 刷新user_message对象以获取数据库自动生成的字段（如id、created_at等）
     await db.refresh(user_message)
+    logger.info("用户消息已存入数据库。")
 
     # 3. 生成AI回答并流式返回，同时收集完整回答
     async def event_stream():
-        answer_chunks = []
-        async for token in agent.handle_message_stream(requirement):
-            answer_chunks.append(token)
-            yield token
-        # 4. 回答生成完毕后，使用摘要agent处理完整回答并生成摘要
-        full_answer = "".join(answer_chunks)
-        summary_agent = SummaryAgent(client)
-        summary_content = await summary_agent.process_and_store(session_id, full_answer, db)
-        
-        # 将摘要内容存入Message表
-        assistant_message = Message(
-            session_id=session_id,
-            content=summary_content,
-            role="assistant"
-        )
-        db.add(assistant_message)
-        await db.commit()
+        full_response = ""
+        try:
+            async for token in agent.handle_message_stream(requirement):
+                full_response += token
+                yield token
+            
+            # 4. 创建AI回答的Message记录
+            ai_message = Message(
+                session_id=session_id,
+                content=full_response,
+                role="assistant"
+            )
+            db.add(ai_message)
+            await db.commit()
+            await db.refresh(ai_message)
+            logger.info("AI消息已存入数据库。")
+            
+            # 使用摘要agent处理完整回答并生成摘要
+            summary_agent = SummaryAgent(llm)
+            summary_content = await summary_agent.process_and_store(session_id, full_response, db)
+            
+            # 将摘要内容存入Message表
+            summary_message = Message(
+                session_id=session_id,
+                content=summary_content,
+                role="assistant"
+            )
+            db.add(summary_message)
+            await db.commit()
+            logger.info("摘要消息已存入数据库。")
+        except Exception as e:
+            logger.error(f"处理流式响应时发生错误: {e}", exc_info=True)
+            yield f"Error: {e}"
 
     return StreamingResponse(event_stream(), media_type="text/plain")
 
