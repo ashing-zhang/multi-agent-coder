@@ -11,14 +11,11 @@ from ..core.utils import get_current_user
 from backend.core.config import settings
 from ..agents.single_agent import SingleNode
 from ..agents.agent_prompts import coder_prompt
-from ..services.kafka_service import KafkaService
 
 # --- 新增：设置日志 ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# 初始化Kafka服务
-kafka_service = KafkaService()
 
 router = APIRouter()
 
@@ -33,9 +30,6 @@ async def test_stream(
     data = await request.json()
     code = data.get("requirement", "")
     logger.info(f"收到的代码 (前50字符): {code[:50]}...")
-    
-    # 将请求发送到Kafka
-    kafka_service.produce_message("agent_request", {"code": code, "user_id": current_user.id})
     
     # 用当前用户的api_key创建model_client
     llm = create_langchain_llm(current_user.api_key, settings.DEEPSEEK_BASE_URL)

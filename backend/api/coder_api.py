@@ -12,14 +12,11 @@ from ..core.utils import get_current_user
 from ..agents.summary_agent import SummaryAgent
 from ..agents.agent_prompts import coder_prompt
 from backend.core.config import settings
-from ..services.kafka_service import KafkaService
 
 # --- 新增：设置日志 ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# 初始化Kafka服务
-kafka_service = KafkaService()
 
 router = APIRouter()
 
@@ -35,13 +32,10 @@ async def coder_stream(
     task = data.get("description", "")
     logger.info(f"收到的任务 (前50字符): {task[:50]}...")
     
-    # 将请求发送到Kafka
-    kafka_service.produce_message("agent_request", {"task": task, "user_id": current_user.id})
-    
     # 用当前用户的api_key创建model_client
     llm = create_langchain_llm(current_user.api_key, settings.DEEPSEEK_BASE_URL)
     agent = SingleNode(llm=llm, system_message=coder_prompt)
-
+    await agent.initialize()
     # 1. 创建新的Session_History记录
     new_session = Session_History(
         user_id=current_user.id,

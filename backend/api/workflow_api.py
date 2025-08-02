@@ -12,7 +12,6 @@ from ..core.database import get_db
 from ..core.utils import get_current_user
 from .set_key import get_current_user
 from pydantic import BaseModel
-from ..services.kafka_service import KafkaService
 
 # --- 新增：设置日志 ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -20,8 +19,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# 初始化Kafka服务
-kafka_service = KafkaService()
 
 class WorkflowRequest(BaseModel):
     requirement: str
@@ -45,9 +42,6 @@ async def workflow_stream(
     data = await request.json()
     requirement = data.get("description", "")
     logger.info(f"收到的需求 (前50字符): {requirement[:50]}...")
-    
-    # 将请求发送到Kafka
-    kafka_service.produce_message("agent_request", {"requirement": requirement, "user_id": current_user.id})
     
     # 用当前用户的api_key创建model_client和llm
     from ..core.config import settings

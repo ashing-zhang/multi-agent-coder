@@ -19,6 +19,5 @@ RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 COPY backend/ ./backend/
-# 这样，backend 容器内会有 /app/frontend_dist 目录
-COPY frontend/src ./frontend_dist
+
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

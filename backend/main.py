@@ -4,34 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from .api import router as api_router
 from dotenv import load_dotenv
-from confluent_kafka import Producer, Consumer, KafkaException
-from .core.config import settings
-from .services.kafka_consumer_service import KafkaConsumerService
 import threading
 
 app = FastAPI(title="Multi-Agent 协作平台")
-
-# Kafka配置
-kafka_conf = {
-    'bootstrap.servers': settings.KAFKA_BOOTSTRAP_SERVERS
-}
-
-# 初始化Kafka生产者
-producer = Producer(kafka_conf)
-
-# 初始化Kafka消费者
-consumer_conf = {
-    'bootstrap.servers': settings.KAFKA_BOOTSTRAP_SERVERS,
-    'group.id': 'agent_group',
-    'auto.offset.reset': 'earliest'
-}
-consumer = Consumer(consumer_conf)
-consumer.subscribe([settings.KAFKA_TOPIC_REQUEST])
-
-# 启动Kafka消费者服务
-kafka_consumer_service = KafkaConsumerService()
-consumer_thread = threading.Thread(target=kafka_consumer_service.start_consuming)
-consumer_thread.start()
 
 # 允许跨域
 app.add_middleware(
