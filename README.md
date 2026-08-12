@@ -1,3 +1,5 @@
+
+
 # Multi-Agent 协作软件工程团队系统
 
 ## 项目简介
@@ -20,7 +22,7 @@
 ### 1. 安装依赖
 后端需安装 Python 3.8+，并安装依赖：
 ```bash
-pip install fastapi uvicorn pydantic
+pip install fastapi uvicorn pydantic python-dotenv sqlalchemy pyjwt alembic
 ```
 
 ### 2. 启动后端服务(开发环境，仅启动pg数据库容器和pgadmin容器并在调试前后端代码过程中始终保持容器的运行)
@@ -55,6 +57,3 @@ workflow = LangGraphWorkflow(model_client)
 async for content in workflow.run_stream(user_requirement):
     print(content)
 ```
-
-
-
